@@ -1,5 +1,4 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
 
 
@@ -106,6 +105,8 @@ class App extends React.Component {
     levelSouth: null,
     levelWest: null,
     levelEast: null,
+
+    inventory: {},
 
     playerX: 2,
     playerY: 5,
@@ -220,7 +221,7 @@ class App extends React.Component {
       case NPC_TILE.key:
         console.log('npc');
         this.setState({
-          dialog: 'Hello, traveler!',
+          dialog: 'Hello, traveler! This is what you have in your inventory: ' + JSON.stringify(this.state.inventory),
         });
         break;
       case WALL_TILE.key:
@@ -243,15 +244,27 @@ class App extends React.Component {
       case UP_STAIRS_TILE.key:
         this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ + 1);
         break;
+      case GRASS_TILE.key:
+        this.collectItem(tileKey, playerX, playerY);
+        break;
       default:
         break;
     }
+  }
+
+  collectItem = (tileKey, x, y) => {
+    console.log('collecting item', tileKey, x, y);
+    const { level, inventory } = this.state;
+    level[y][x] = EMPTY_TILE.key;
+    inventory[tileKey] = (inventory[tileKey] || 0) + 1;
+    this.setState({ level, inventory });
   }
 
   componentDidMount(): void {
     document.addEventListener('keydown', this.onKeyPress);
     this.loadLevel(0, 0, 0);
   }
+
   onKeyPress = (e) => {
     switch (e.key) {
       case 'ArrowLeft':
@@ -270,12 +283,14 @@ class App extends React.Component {
         break;
     }
   }
+
   handleLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
     console.log('west');
     this.movePlayer(-1, 0);
   }
+
   handleRight = () => {
     const { dialog } = this.state;
     if (dialog) {
@@ -285,12 +300,14 @@ class App extends React.Component {
     console.log('east');
     this.movePlayer(1, 0);
   }
+
   handleUp = () => {
     const { dialog } = this.state;
     if (dialog) { return }
     console.log('north');
     this.movePlayer(0, -1);
   }
+
   handleDown = () => {
     const { dialog } = this.state;
     if (dialog) { return }
