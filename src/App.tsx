@@ -33,6 +33,7 @@ const ROCK_TILE = {
   name: 'rock',
   color: 'gray',
   key: 'r',
+  impassable: true,
 }
 
 const PLAYER_TILE = {
@@ -108,6 +109,8 @@ class App extends React.Component {
 
     playerX: 2,
     playerY: 5,
+
+    dialog: null,
   }
 
   /** Safely get a level */
@@ -195,7 +198,7 @@ class App extends React.Component {
 
     const newTileKey = newLevel[newPlayerY][newPlayerX];
     if (TILE_MAP[newTileKey].impassable) {
-      console.log('impassable tile', newTileKey);
+      this.handleHitImpassableTile(newTileKey, newPlayerX, newPlayerY);
       return false;
     }
 
@@ -208,6 +211,23 @@ class App extends React.Component {
       playerY: newPlayerY,
     }, this.afterMove);
     return true;
+  }
+
+  handleHitImpassableTile = (tileKey, tileX, tileY) => {
+    console.log('hit impassable tile', tileKey, tileX, tileY);
+    const tile = TILE_MAP[tileKey];
+    switch (tileKey) {
+      case NPC_TILE.key:
+        console.log('npc');
+        this.setState({
+          dialog: 'Hello, traveler!',
+        });
+        break;
+      case WALL_TILE.key:
+      default:
+        console.debug('impassable tile', tile.key);
+        break;
+    }
   }
 
   afterMove = () => {
@@ -251,18 +271,29 @@ class App extends React.Component {
     }
   }
   handleLeft = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
     console.log('west');
     this.movePlayer(-1, 0);
   }
   handleRight = () => {
+    const { dialog } = this.state;
+    if (dialog) {
+      this.setState({ dialog: null });
+      return;
+    }
     console.log('east');
     this.movePlayer(1, 0);
   }
   handleUp = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
     console.log('north');
     this.movePlayer(0, -1);
   }
   handleDown = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
     console.log('south');
     this.movePlayer(0, 1);
   }
@@ -277,6 +308,8 @@ class App extends React.Component {
       levelSouth,
       levelWest,
       levelEast,
+
+      dialog,
     } = this.state;
 
     if (!level) {
@@ -292,6 +325,19 @@ class App extends React.Component {
 
     return (
       <div className="App">
+        <div style={{
+          display: dialog ? 'block' : 'none',
+          position: 'absolute',
+          top: '10vh',
+          left: '10vw',
+          right: '10vw',
+          padding: '1em',
+          background: 'rgba(255, 255, 255, 0.8)',
+          border: '1px solid black',
+          minHeight: '40vh',
+        }}>
+          {dialog}
+        </div>
         <div style={{ display: 'flex' }}>
           {rowNorth.map((cell, x) => {
             const cellData = TILE_MAP[cell];
