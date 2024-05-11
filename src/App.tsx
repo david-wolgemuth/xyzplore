@@ -61,6 +61,18 @@ const HOUSE_TILE = {
   impassable: true,
 }
 
+const DOWN_STAIRS_TILE = {
+  name: 'down-stairs',
+  color: 'yellow',
+  key: 'd',
+}
+
+const UP_STAIRS_TILE = {
+  name: 'up-stairs',
+  color: 'yellow',
+  key: 'u',
+}
+
 const TILES = [
   WALL_TILE,
   EMPTY_TILE,
@@ -71,6 +83,8 @@ const TILES = [
   NPC_TILE,
   TREE_TILE,
   HOUSE_TILE,
+  DOWN_STAIRS_TILE,
+  UP_STAIRS_TILE,
 ]
 
 const TILE_MAP = TILES.reduce((acc, tile) => {
@@ -192,7 +206,26 @@ class App extends React.Component {
     this.setState({
       playerX: newPlayerX,
       playerY: newPlayerY,
-    });
+    }, this.afterMove);
+    return true;
+  }
+
+  afterMove = () => {
+    const { playerX, playerY } = this.state;
+    const tileKey = this.state.level[this.state.playerY][this.state.playerX];
+    const tile = TILE_MAP[tileKey];
+    console.debug('after move', { playerX, playerY, tileKey, tile });
+
+    switch (tileKey) {
+      case DOWN_STAIRS_TILE.key:
+        this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ - 1);
+        break;
+      case UP_STAIRS_TILE.key:
+        this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ + 1);
+        break;
+      default:
+        break;
+    }
   }
 
   componentDidMount(): void {
@@ -202,10 +235,10 @@ class App extends React.Component {
   onKeyPress = (e) => {
     switch (e.key) {
       case 'ArrowLeft':
-        this.handleWest();
+        this.handleLeft();
         break;
       case 'ArrowRight':
-        this.handleEast();
+        this.handleRight();
         break;
       case 'ArrowUp':
         this.handleUp();
@@ -217,11 +250,11 @@ class App extends React.Component {
         break;
     }
   }
-  handleWest = () => {
+  handleLeft = () => {
     console.log('west');
     this.movePlayer(-1, 0);
   }
-  handleEast = () => {
+  handleRight = () => {
     console.log('east');
     this.movePlayer(1, 0);
   }
