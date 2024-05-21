@@ -4,72 +4,83 @@ import './App.css';
 
 const WALL_TILE = {
   name: 'border',
-  color: 'brown',
+  backgroundColor: 'brown',
+  textColor: 'white',
   key: 'x',
   impassable: true,
 }
 
 const EMPTY_TILE = {
   name: 'empty',
-  color: 'black',
+  backgroundColor: 'black',
+  textColor: 'white',
   key: '-',
 }
 
 const WATER_TILE = {
   name: 'water',
-  color: 'blue',
+  backgroundColor: 'blue',
+  textColor: 'white',
   key: 'w',
   impassable: true,
 }
 
 const GRASS_TILE = {
   name: 'grass',
-  color: 'green',
+  backgroundColor: 'green',
+  textColor: 'black',
   key: 'g',
 }
 
 const ROCK_TILE = {
   name: 'rock',
-  color: 'gray',
+  backgroundColor: 'gray',
+  textColor: 'black',
   key: 'r',
   impassable: true,
 }
 
 const PLAYER_TILE = {
   name: 'player',
-  color: 'pink',
+  backgroundColor: 'pink',
+  color: 'black',
   key: 'P',
 }
 
 const NPC_TILE = {
   name: 'npc',
-  color: 'orange',
+  backgroundColor: 'orange',
+  color: 'black',
   key: 'N',
   impassable: true,
 }
 
 const TREE_TILE = {
   name: 'tree',
-  color: 'turquoise',
+  backgroundColor: 'turquoise',
+  color: 'black',
   key: 'T',
 }
 
 const HOUSE_TILE = {
   name: 'house',
-  color: 'brown',
+  backgroundColor: 'brown',
+  color: 'black',
   key: 'H',
   impassable: true,
 }
 
 const DOWN_STAIRS_TILE = {
   name: 'down-stairs',
-  color: 'yellow',
+  backgroundColor: 'yellow',
+  color: 'black',
   key: 'd',
 }
 
 const UP_STAIRS_TILE = {
   name: 'up-stairs',
-  color: 'yellow',
+  backgroundColor: 'yellow',
+  color: 'black',
   key: 'u',
 }
 
@@ -367,7 +378,8 @@ class App extends React.Component {
                     style={{
                       width: `${100 / (2 * 13)}vw`,
                       height: `${100 / (2 * 13)}vw`,
-                      backgroundColor: cellData.color,
+                      backgroundColor: cellData.backgroundColor,
+                      color: cellData.textColor,
                     }}
                   />
                   <div
@@ -375,7 +387,8 @@ class App extends React.Component {
                     style={{
                       width: `${100 / 13}vw`,
                       height: `${100 / (2 * 13)}vw`,
-                      backgroundColor: cellData.color,
+                      backgroundColor: cellData.backgroundColor,
+                      color: cellData.textColor,
                     }}
                   >
                     {/* {cellData.name} */}
@@ -392,7 +405,8 @@ class App extends React.Component {
                     style={{
                       width: `${100 / 13}vw`,
                       height: `${100 / (2 * 13)}vw`,
-                      backgroundColor: cellData.color,
+                      backgroundColor: cellData.backgroundColor,
+                      color: cellData.textColor,
                     }}
                   >
                     {/* {cellData.name} */}
@@ -402,7 +416,8 @@ class App extends React.Component {
                     style={{
                       width: `${100 / (2 * 13)}vw`,
                       height: `${100 / (2 * 13)}vw`,
-                      backgroundColor: cellData.color,
+                      backgroundColor: cellData.backgroundColor,
+                      color: cellData.textColor,
                     }}
                   />
                 </>
@@ -414,7 +429,8 @@ class App extends React.Component {
                 style={{
                   width: `${100 / 13}vw`,
                   height: `${100 / (2 * 13)}vw`,
-                  backgroundColor: cellData.color,
+                  backgroundColor: cellData.backgroundColor,
+                      color: cellData.textColor,
                 }}
               >
                 {/* {cellData.name} */}
@@ -432,7 +448,8 @@ class App extends React.Component {
                     style={{
                       width: `${100 / (2 * 13)}vw`,
                       height: `${100 / 13}vw`,
-                      backgroundColor: cellData.color,
+                      backgroundColor: cellData.backgroundColor,
+                      color: cellData.textColor,
                     }}
                   >
                     {/* {cellData.name} */}
@@ -456,10 +473,11 @@ class App extends React.Component {
 
                       fontSize: '1.5em',
 
-                      backgroundColor: cellData.color,
+                      backgroundColor: cellData.backgroundColor,
+                      color: cellData.textColor,
                     }}
                   >
-                    {cellData.name}
+                    {cellData.name[0]}
                   </div>
                 )
               })}
@@ -470,7 +488,8 @@ class App extends React.Component {
                     style={{
                       width: `${100 / (2 * 13)}vw`,
                       height: `${100 / 13}vw`,
-                      backgroundColor: cellData.color,
+                      backgroundColor: cellData.backgroundColor,
+                      color: cellData.textColor,
                     }}
                   >
                     {/* {cellData.name} */}
@@ -494,7 +513,7 @@ class App extends React.Component {
                   style={{
                     width: `${100 / (2 * 13)}vw`,
                     height: `${100 / (2 * 13)}vw`,
-                    backgroundColor: cellData.color,
+                    backgroundColor: cellData.backgroundColor,
                   }}
                 />
                 <div
@@ -502,7 +521,7 @@ class App extends React.Component {
                   style={{
                     width: `${100 / 13}vw`,
                     height: `${100 / (2 * 13)}vw`,
-                    backgroundColor: cellData.color,
+                    backgroundColor: cellData.backgroundColor,
                   }}
                 >
                   {/* {cellData.name} */}
@@ -519,7 +538,7 @@ class App extends React.Component {
                   style={{
                     width: `${100 / 13}vw`,
                     height: `${100 / (2 * 13)}vw`,
-                    backgroundColor: cellData.color,
+                    backgroundColor: cellData.backgroundColor,
                   }}
                 >
                   {/* {cellData.name} */}
@@ -529,7 +548,7 @@ class App extends React.Component {
                   style={{
                     width: `${100 / (2 * 13)}vw`,
                     height: `${100 / (2 * 13)}vw`,
-                    backgroundColor: cellData.color,
+                    backgroundColor: cellData.backgroundColor,
                   }}
                 />
               </>
@@ -541,7 +560,7 @@ class App extends React.Component {
               style={{
                 width: `${100 / 13}vw`,
                 height: `${100 / (2 * 13)}vw`,
-                backgroundColor: cellData.color,
+                backgroundColor: cellData.backgroundColor,
               }}
             >
               {/* {cellData.name} */}
