@@ -1,107 +1,8 @@
 import React from 'react';
 import './App.css';
 
-
-const WALL_TILE = {
-  name: 'border',
-  backgroundColor: 'brown',
-  textColor: 'white',
-  key: 'x',
-  impassable: true,
-}
-
-const EMPTY_TILE = {
-  name: 'empty',
-  backgroundColor: 'black',
-  textColor: 'white',
-  key: '-',
-}
-
-const WATER_TILE = {
-  name: 'water',
-  backgroundColor: 'blue',
-  textColor: 'white',
-  key: 'w',
-  impassable: true,
-}
-
-const GRASS_TILE = {
-  name: 'grass',
-  backgroundColor: 'green',
-  textColor: 'black',
-  key: 'g',
-}
-
-const ROCK_TILE = {
-  name: 'rock',
-  backgroundColor: 'gray',
-  textColor: 'black',
-  key: 'r',
-  impassable: true,
-}
-
-const PLAYER_TILE = {
-  name: 'player',
-  backgroundColor: 'pink',
-  color: 'black',
-  key: 'P',
-}
-
-const NPC_TILE = {
-  name: 'npc',
-  backgroundColor: 'orange',
-  color: 'black',
-  key: 'N',
-  impassable: true,
-}
-
-const TREE_TILE = {
-  name: 'tree',
-  backgroundColor: 'turquoise',
-  color: 'black',
-  key: 'T',
-}
-
-const HOUSE_TILE = {
-  name: 'house',
-  backgroundColor: 'brown',
-  color: 'black',
-  key: 'H',
-  impassable: true,
-}
-
-const DOWN_STAIRS_TILE = {
-  name: 'down-stairs',
-  backgroundColor: 'yellow',
-  color: 'black',
-  key: 'd',
-}
-
-const UP_STAIRS_TILE = {
-  name: 'up-stairs',
-  backgroundColor: 'yellow',
-  color: 'black',
-  key: 'u',
-}
-
-const TILES = [
-  WALL_TILE,
-  EMPTY_TILE,
-  WATER_TILE,
-  GRASS_TILE,
-  ROCK_TILE,
-  PLAYER_TILE,
-  NPC_TILE,
-  TREE_TILE,
-  HOUSE_TILE,
-  DOWN_STAIRS_TILE,
-  UP_STAIRS_TILE,
-]
-
-const TILE_MAP = TILES.reduce((acc, tile) => {
-  acc[tile.key] = tile;
-  return acc;
-}, {});
+import { TILE_MAP, EMPTY_TILE, WALL_TILE, NPC_TILE, GRASS_TILE, DOWN_STAIRS_TILE, UP_STAIRS_TILE } from './Tiles';
+import { Grid, Row } from './Grid';
 
 
 class App extends React.Component {
@@ -352,225 +253,34 @@ class App extends React.Component {
     const columnEast = levelEast ? levelEast.map(row => row[0]) : blockedRow;
 
     return (
-      <div className="App">
-        <div style={{
-          display: dialog ? 'block' : 'none',
-          position: 'absolute',
-          top: '10vh',
-          left: '10vw',
-          right: '10vw',
-          padding: '1em',
-          background: 'rgba(255, 255, 255, 0.8)',
-          border: '1px solid black',
-          minHeight: '40vh',
-        }}>
-          {dialog}
-        </div>
-        <div style={{ display: 'flex' }}>
-          {rowNorth.map((cell, x) => {
-            const cellData = TILE_MAP[cell];
-            if (x === 0) {
-              // dupe, and make half width
-              return (
-                <>
-                  <div
-                    key={`north-pad${x}`}
-                    style={{
-                      width: `${100 / (2 * 13)}vw`,
-                      height: `${100 / (2 * 13)}vw`,
-                      backgroundColor: cellData.backgroundColor,
-                      color: cellData.textColor,
-                    }}
-                  />
-                  <div
-                    key={`north${x}`}
-                    style={{
-                      width: `${100 / 13}vw`,
-                      height: `${100 / (2 * 13)}vw`,
-                      backgroundColor: cellData.backgroundColor,
-                      color: cellData.textColor,
-                    }}
-                  >
-                    {/* {cellData.name} */}
-                  </div>
-                </>
-              )
-            }
-            if (x === rowNorth.length - 1) {
-              // dupe, and make half width
-              return (
-                <>
-                  <div
-                    key={`north${x}`}
-                    style={{
-                      width: `${100 / 13}vw`,
-                      height: `${100 / (2 * 13)}vw`,
-                      backgroundColor: cellData.backgroundColor,
-                      color: cellData.textColor,
-                    }}
-                  >
-                    {/* {cellData.name} */}
-                  </div>
-                  <div
-                    key={`north-padd${x}`}
-                    style={{
-                      width: `${100 / (2 * 13)}vw`,
-                      height: `${100 / (2 * 13)}vw`,
-                      backgroundColor: cellData.backgroundColor,
-                      color: cellData.textColor,
-                    }}
-                  />
-                </>
-              )
-            }
-            return (
-              <div
-                key={`north${x}`}
-                style={{
-                  width: `${100 / 13}vw`,
-                  height: `${100 / (2 * 13)}vw`,
-                  backgroundColor: cellData.backgroundColor,
-                      color: cellData.textColor,
-                }}
-              >
-                {/* {cellData.name} */}
-              </div>
-            )
-          })}
-        </div>
-        {level.map((row, y) => {
-          return (
-            <div key={y} style={{ display: 'flex' }}>
-              {(() => {
-                const cellData = TILE_MAP[columnWest[y]];
-                return (
-                  <div
-                    style={{
-                      width: `${100 / (2 * 13)}vw`,
-                      height: `${100 / 13}vw`,
-                      backgroundColor: cellData.backgroundColor,
-                      color: cellData.textColor,
-                    }}
-                  >
-                    {/* {cellData.name} */}
-                  </div>
-                )
-              })()}
-              {row.map((cell, x) => {
-                let key = cell;
-                if (x === playerX && y === playerY) {
-                  key = 'P';
-                }
-                const cellData = TILE_MAP[key];
-
-                return (
-                  <div
-                    key={`${x},${y}`}
-                    style={{
-                      // should be square - width of all tiles stretch to fit screen
-                      width: `${100 / 13}vw`,  // Each tile takes up 1/12th of the viewport width
-                      height: `${100 / 13}vw`, // Height is the same as the width to maintain a square
-
-                      fontSize: '1.5em',
-
-                      backgroundColor: cellData.backgroundColor,
-                      color: cellData.textColor,
-                    }}
-                  >
-                    {cellData.name[0]}
-                  </div>
-                )
-              })}
-              {(() => {
-                const cellData = TILE_MAP[columnEast[y]];
-                return (
-                  <div
-                    style={{
-                      width: `${100 / (2 * 13)}vw`,
-                      height: `${100 / 13}vw`,
-                      backgroundColor: cellData.backgroundColor,
-                      color: cellData.textColor,
-                    }}
-                  >
-                    {/* {cellData.name} */}
-                  </div>
-                )
-              })()}
-            </div>
-          )
-      })}
-      <div
-        style={{ display: 'flex' }}
-      >
-        {rowSouth.map((cell, x) => {
-          const cellData = TILE_MAP[cell];
-          if (x === 0) {
-            // dupe, and make half width
-            return (
-              <>
-                <div
-                  key={`north${x}`}
-                  style={{
-                    width: `${100 / (2 * 13)}vw`,
-                    height: `${100 / (2 * 13)}vw`,
-                    backgroundColor: cellData.backgroundColor,
-                  }}
-                />
-                <div
-                  key={`north-padd${x}`}
-                  style={{
-                    width: `${100 / 13}vw`,
-                    height: `${100 / (2 * 13)}vw`,
-                    backgroundColor: cellData.backgroundColor,
-                  }}
-                >
-                  {/* {cellData.name} */}
-                </div>
-              </>
-            )
-          }
-          if (x === rowNorth.length - 1) {
-            // dupe, and make half width
-            return (
-              <>
-                <div
-                  key={`north${x}`}
-                  style={{
-                    width: `${100 / 13}vw`,
-                    height: `${100 / (2 * 13)}vw`,
-                    backgroundColor: cellData.backgroundColor,
-                  }}
-                >
-                  {/* {cellData.name} */}
-                </div>
-                <div
-                  key={`north-padd${x}`}
-                  style={{
-                    width: `${100 / (2 * 13)}vw`,
-                    height: `${100 / (2 * 13)}vw`,
-                    backgroundColor: cellData.backgroundColor,
-                  }}
-                />
-              </>
-            )
-          }
-          return (
-            <div
-              key={`south${x}`}
-              style={{
-                width: `${100 / 13}vw`,
-                height: `${100 / (2 * 13)}vw`,
-                backgroundColor: cellData.backgroundColor,
-              }}
-            >
-              {/* {cellData.name} */}
-            </div>
-          )
-        })}
-      </div>
+      <div>
+        <Dialog dialog={dialog} />
+        <Row cells={rowNorth} rowType="north" widthFactor={100 / 13} heightFactor={100 / 13} />
+        <Grid level={level} playerX={playerX} playerY={playerY} columnWest={columnWest} columnEast={columnEast} />
+        <Row cells={rowSouth} rowType="south" widthFactor={100 / 13} heightFactor={100 / 13} />
       </div>
     );
   }
 }
+
+
+const Dialog = ({ dialog }) => (
+  <div
+    style={{
+      display: dialog ? 'block' : 'none',
+      position: 'absolute',
+      top: '10vh',
+      left: '10vw',
+      right: '10vw',
+      padding: '1em',
+      background: 'rgba(255, 255, 255, 0.8)',
+      border: '1px solid black',
+      minHeight: '40vh',
+    }}
+  >
+    {dialog}
+  </div>
+);
+
 
 export default App;
