@@ -9,7 +9,7 @@ export const WALL_TILE = {
 
 export const EMPTY_TILE = {
   name: 'empty',
-  backgroundColor: 'black',
+  backgroundColor: '#1e1c1c',
   textColor: 'white',
   key: '-',
 }
@@ -24,7 +24,7 @@ export const WATER_TILE = {
 
 export const GRASS_TILE = {
   name: 'grass',
-  backgroundColor: 'green',
+  backgroundColor: '#2c6d2c',
   textColor: 'black',
   key: 'g',
 }
@@ -42,6 +42,7 @@ export const PLAYER_TILE = {
   backgroundColor: 'pink',
   color: 'black',
   key: 'P',
+  impassable: true,
 }
 
 export const NPC_TILE = {
@@ -50,6 +51,7 @@ export const NPC_TILE = {
   color: 'black',
   key: 'N',
   impassable: true,
+  npc: true,
 }
 
 export const TREE_TILE = {
@@ -81,6 +83,16 @@ export const UP_STAIRS_TILE = {
   key: 'u',
 }
 
+export const SLIME_TILE = {
+  name: 'slime',
+  backgroundColor: 'lime',
+  color: 'black',
+  key: 's',
+  impassable: true,
+  npc: true,
+}
+
+
 export const TILES = [
   WALL_TILE,
   EMPTY_TILE,
@@ -89,6 +101,7 @@ export const TILES = [
   ROCK_TILE,
   PLAYER_TILE,
   NPC_TILE,
+  SLIME_TILE,
   TREE_TILE,
   HOUSE_TILE,
   DOWN_STAIRS_TILE,

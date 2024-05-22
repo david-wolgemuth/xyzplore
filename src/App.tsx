@@ -10,8 +10,9 @@ import {
   DOWN_STAIRS_TILE,
   UP_STAIRS_TILE,
   PLAYER_TILE,
+  SLIME_TILE,
 } from './Tiles';
-import { Grid, Row } from './Grid';
+import { Grid } from './Grid';
 
 
 class App extends React.Component {
@@ -28,6 +29,7 @@ class App extends React.Component {
     levelEast: null,
 
     inventory: {},
+    npcs: [],
 
     playerX: 2,
     playerY: 5,
@@ -51,6 +53,19 @@ class App extends React.Component {
   loadLevel = (x, y, z, cb = null) => {
     const levelCSV = require(`./levels/${x},${y},${z}.csv`);
     const level = JSON.parse(levelCSV.split('module.exports = ')[1]);
+    const npcs = level.reduce((acc, row, y) => {
+      row.forEach((tile, x) => {
+        if (TILE_MAP[tile].npc) {
+          acc.push({
+            x,
+            y,
+            tile,
+            state: {},
+          });
+        }
+      });
+      return acc;
+    }, []);
 
     const levelNorth = this.getLevel(x, y - 1, z);
     const levelSouth = this.getLevel(x, y + 1, z);
@@ -62,6 +77,7 @@ class App extends React.Component {
       levelY: y,
       levelZ: z,
       level,
+      npcs: npcs,
 
       levelNorth,
       levelSouth,
@@ -145,6 +161,12 @@ class App extends React.Component {
           dialog: 'Hello, traveler! This is what you have in your inventory: ' + JSON.stringify(this.state.inventory),
         });
         break;
+      case SLIME_TILE.key:
+        console.log('slime');
+        this.setState({
+          dialog: 'You encountered a slime!',
+        });
+        break;
       case WALL_TILE.key:
       default:
         console.debug('impassable tile', tile.key);
@@ -152,25 +174,114 @@ class App extends React.Component {
     }
   }
 
-  afterMove = () => {
-    const { playerX, playerY } = this.state;
-    const tileKey = this.state.level[this.state.playerY][this.state.playerX];
-    const tile = TILE_MAP[tileKey];
-    console.debug('after move', { playerX, playerY, tileKey, tile });
+  moveNPCs = (cb) => {
+    const level = this.state.level;
+    const newNpcs = this.state.npcs.map(npc => {
+      switch (npc.tile) {
+        case SLIME_TILE.key:
+          const newSlime = this.moveSlime(npc);
+          if (npc.x !== newSlime.x || npc.y !== newSlime.y) {
+            level[npc.y][npc.x] = EMPTY_TILE.key;
+            level[newSlime.y][newSlime.x] = SLIME_TILE.key;
+          }
+          return newSlime;
+        default:
+          return npc;
+      }
+    });
 
-    switch (tileKey) {
-      case DOWN_STAIRS_TILE.key:
-        this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ - 1);
+    this.setState({
+      npcs: newNpcs,
+      level,
+    }, cb);
+  }
+
+  /**
+   * moves in counter-clockwise direction,
+   * based on previous direction
+   *
+   * returns new npc state
+   */
+  moveSlime = (slime) => {
+    const { x, y } = slime;
+    switch (slime.prevDirection) {
+      case '0,-1':
+        if (this.canMoveNPC(x, y, -1, 0)) {
+          return {
+            ...slime,
+            x: slime.x - 1,
+            prevDirection: '-1,0',
+          };
+        }
         break;
-      case UP_STAIRS_TILE.key:
-        this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ + 1);
+      case '-1,0':
+        if (this.canMoveNPC(x, y, 0, 1)) {
+          return {
+            ...slime,
+            y: slime.y + 1,
+            prevDirection: '0,1',
+          };
+        }
         break;
-      case GRASS_TILE.key:
-        this.collectItem(tileKey, playerX, playerY);
+      case '0,1':
+        if (this.canMoveNPC(x, y, 1, 0)) {
+          return {
+            ...slime,
+            x: slime.x + 1,
+            prevDirection:'1,0',
+          };
+        }
         break;
+      case '1,0':
       default:
+        if (this.canMoveNPC(x, y, 0, -1)) {
+          return {
+            ...slime,
+            y: slime.y - 1,
+            prevDirection: '0,-1',
+          };
+        }
         break;
     }
+    console.warn('slime is stuck', slime);
+    return slime;
+  }
+
+  canMoveNPC = (x, y, dx, dy) => {
+    const { level } = this.state;
+    if (!level[y + dy] || !level[y + dy][x + dx]) {
+      // out of bounds
+      return false;
+    }
+    const newTileKey = level[y + dy][x + dx];
+    if (TILE_MAP[newTileKey].impassable) {
+      return false;
+    }
+    return true;
+  }
+
+  afterMove = () => {
+    this.moveNPCs(() => {
+      const { playerX, playerY } = this.state;
+
+      const tileKey = this.state.level[this.state.playerY][this.state.playerX];
+      const tile = TILE_MAP[tileKey];
+      console.debug('after move', { playerX, playerY, tileKey, tile });
+
+      switch (tileKey) {
+        case DOWN_STAIRS_TILE.key:
+          this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ - 1);
+          break;
+        case UP_STAIRS_TILE.key:
+          this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ + 1);
+          break;
+        case GRASS_TILE.key:
+          this.collectItem(tileKey, playerX, playerY);
+          break;
+        default:
+          break;
+      }
+    });
   }
 
   collectItem = (tileKey, x, y) => {
