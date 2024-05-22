@@ -1,7 +1,16 @@
 import React from 'react';
 import './App.css';
 
-import { TILE_MAP, EMPTY_TILE, WALL_TILE, NPC_TILE, GRASS_TILE, DOWN_STAIRS_TILE, UP_STAIRS_TILE } from './Tiles';
+import {
+  TILE_MAP,
+  EMPTY_TILE,
+  WALL_TILE,
+  NPC_TILE,
+  GRASS_TILE,
+  DOWN_STAIRS_TILE,
+  UP_STAIRS_TILE,
+  PLAYER_TILE,
+} from './Tiles';
 import { Grid, Row } from './Grid';
 
 
@@ -252,12 +261,34 @@ class App extends React.Component {
     const columnWest = levelWest ? levelWest.map(row => row[row.length - 1]) : blockedRow;
     const columnEast = levelEast ? levelEast.map(row => row[0]) : blockedRow;
 
+    const visibleCells = [
+      [...columnWest[0], ...rowNorth, ...columnEast[0]],
+      ...level.map((row, y) => {
+        return [
+          columnWest[y],
+          ...row,
+          columnEast[y],
+        ];
+      }),
+      [...columnWest[columnWest.length - 1], ...rowSouth, ...columnEast[columnEast.length - 1]],
+    ];
+
+    visibleCells[playerY + 1][playerX + 1] = PLAYER_TILE.key;
+
+    for (let y = 0; y < visibleCells.length; y++) {
+      for (let x = 0; x < visibleCells[y].length; x++) {
+        if (!visibleCells[y][x]) {
+          visibleCells[y][x] = EMPTY_TILE.key;
+        }
+      }
+    }
+
     return (
       <div>
         <Dialog dialog={dialog} />
-        <Row cells={rowNorth} rowType="north" widthFactor={100 / 13} heightFactor={100 / 13} />
-        <Grid level={level} playerX={playerX} playerY={playerY} columnWest={columnWest} columnEast={columnEast} />
-        <Row cells={rowSouth} rowType="south" widthFactor={100 / 13} heightFactor={100 / 13} />
+        <Grid
+          cells={visibleCells}
+        />
       </div>
     );
   }
