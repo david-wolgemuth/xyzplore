@@ -4,15 +4,18 @@ import './App.css';
 import {
   TILE_MAP,
   EMPTY_TILE,
+  BAT_TILE,
   WALL_TILE,
   NPC_TILE,
-  GRASS_TILE,
+  FLOWER_TILE,
   DOWN_STAIRS_TILE,
   UP_STAIRS_TILE,
   PLAYER_TILE,
   SLIME_TILE,
+  HOUSE_TILE,
 } from './Tiles';
 import { Grid } from './Grid';
+import { randomChoice, randomSort } from './utilities';
 
 
 class App extends React.Component {
@@ -35,6 +38,7 @@ class App extends React.Component {
     playerY: 5,
 
     dialog: null,
+    gameOver: false,
   }
 
   /** Safely get a level */
@@ -53,19 +57,23 @@ class App extends React.Component {
   loadLevel = (x, y, z, cb = null) => {
     const levelCSV = require(`./levels/${x},${y},${z}.csv`);
     const level = JSON.parse(levelCSV.split('module.exports = ')[1]);
-    const npcs = level.reduce((acc, row, y) => {
-      row.forEach((tile, x) => {
-        if (TILE_MAP[tile].npc) {
-          acc.push({
+    const npcs = [];
+    for (let y = 0; y < level.length; y++) {
+      for (let x = 0; x < level[y].length; x++) {
+        if (TILE_MAP[level[y][x]].npc) {
+          npcs.push({
             x,
             y,
-            tile,
+            tile: level[y][x],
             state: {},
           });
+          level[y][x] = EMPTY_TILE.key;
         }
-      });
-      return acc;
-    }, []);
+        if (TILE_MAP[level[y][x]].key === PLAYER_TILE.key) {
+          level[y][x] = EMPTY_TILE.key;
+        }
+      }
+    }
 
     const levelNorth = this.getLevel(x, y - 1, z);
     const levelSouth = this.getLevel(x, y + 1, z);
@@ -101,7 +109,7 @@ class App extends React.Component {
       levelEast,
     } = this.state;
 
-    let newLevel = level;
+    let newLevel = null;
     let newLevelXYZ = [];
     let newPlayerX = playerX + dx;
     let newPlayerY = playerY + dy;
@@ -129,26 +137,29 @@ class App extends React.Component {
       newLevelXYZ = [levelX, levelY + 1, levelZ];
     }
 
-    if (!newLevel) {
-      console.log('no level in that direction');
-      return false;
-    }
-
-    const newTileKey = newLevel[newPlayerY][newPlayerX];
-    if (TILE_MAP[newTileKey].impassable) {
-      this.handleHitImpassableTile(newTileKey, newPlayerX, newPlayerY);
-      return false;
-    }
-
-    if (level !== newLevel) {
+    if (newLevel) {
       this.loadLevel(newLevelXYZ[0], newLevelXYZ[1], newLevelXYZ[2]);
-    }
 
-    this.setState({
-      playerX: newPlayerX,
-      playerY: newPlayerY,
-    }, this.afterMove);
-    return true;
+      this.setState({
+        playerX: newPlayerX,
+        playerY: newPlayerY,
+      }, this.afterMove);
+      return true;
+
+    } else {
+      const newTileKey = this.getFlattenedLevel()[newPlayerY][newPlayerX];
+
+      if (TILE_MAP[newTileKey].impassable) {
+        this.handleHitImpassableTile(newTileKey, newPlayerX, newPlayerY);
+        return false;
+      }
+
+      this.setState({
+        playerX: newPlayerX,
+        playerY: newPlayerY,
+      }, this.afterMove);
+      return true;
+    }
   }
 
   handleHitImpassableTile = (tileKey, tileX, tileY) => {
@@ -161,10 +172,18 @@ class App extends React.Component {
           dialog: 'Hello, traveler! This is what you have in your inventory: ' + JSON.stringify(this.state.inventory),
         });
         break;
-      case SLIME_TILE.key:
-        console.log('slime');
+      case HOUSE_TILE.key:
+        console.log('house');
         this.setState({
-          dialog: 'You encountered a slime!',
+          dialog: 'You entered a house, and rest.  Game saved',
+        });
+        this.saveGame();
+        break;
+      case SLIME_TILE.key:
+      case BAT_TILE.key:
+        this.setState({
+          gameOver: true,
+          dialog: 'You were eaten by a slime!  Game over',
         });
         break;
       case WALL_TILE.key:
@@ -175,16 +194,12 @@ class App extends React.Component {
   }
 
   moveNPCs = (cb) => {
-    const level = this.state.level;
     const newNpcs = this.state.npcs.map(npc => {
       switch (npc.tile) {
         case SLIME_TILE.key:
-          const newSlime = this.moveSlime(npc);
-          if (npc.x !== newSlime.x || npc.y !== newSlime.y) {
-            level[npc.y][npc.x] = EMPTY_TILE.key;
-            level[newSlime.y][newSlime.x] = SLIME_TILE.key;
-          }
-          return newSlime;
+          return this.moveSlime(npc);
+        case BAT_TILE.key:
+          return this.moveBat(npc);
         default:
           return npc;
       }
@@ -192,7 +207,6 @@ class App extends React.Component {
 
     this.setState({
       npcs: newNpcs,
-      level,
     }, cb);
   }
 
@@ -202,49 +216,136 @@ class App extends React.Component {
    *
    * returns new npc state
    */
-  moveSlime = (slime) => {
-    const { x, y } = slime;
-    switch (slime.prevDirection) {
-      case '0,-1':
-        if (this.canMoveNPC(x, y, -1, 0)) {
-          return {
-            ...slime,
-            x: slime.x - 1,
-            prevDirection: '-1,0',
-          };
-        }
-        break;
-      case '-1,0':
-        if (this.canMoveNPC(x, y, 0, 1)) {
-          return {
-            ...slime,
-            y: slime.y + 1,
-            prevDirection: '0,1',
-          };
-        }
-        break;
-      case '0,1':
-        if (this.canMoveNPC(x, y, 1, 0)) {
-          return {
-            ...slime,
-            x: slime.x + 1,
-            prevDirection:'1,0',
-          };
-        }
-        break;
-      case '1,0':
-      default:
-        if (this.canMoveNPC(x, y, 0, -1)) {
-          return {
-            ...slime,
-            y: slime.y - 1,
-            prevDirection: '0,-1',
-          };
-        }
-        break;
+  moveSlime = (slime, isRetry = false) => {
+    const { x, y, prevDirection, clockwise } = slime;
+    console.log('moving slime', slime);
+    if (clockwise) {
+      switch (prevDirection) {
+        case '0,-1':
+          if (this.canMoveNPC(x, y, -1, 0)) {
+            return {
+              ...slime,
+              x: slime.x - 1,
+              prevDirection: '-1,0',
+            };
+          }
+          break;
+        case '-1,0':
+          if (this.canMoveNPC(x, y, 0, 1)) {
+            return {
+              ...slime,
+              y: slime.y + 1,
+              prevDirection: '0,1',
+            };
+          }
+          break;
+        case '0,1':
+          if (this.canMoveNPC(x, y, 1, 0)) {
+            return {
+              ...slime,
+              x: slime.x + 1,
+              prevDirection:'1,0',
+            };
+          }
+          break;
+        case '1,0':
+        default:
+          if (this.canMoveNPC(x, y, 0, -1)) {
+            return {
+              ...slime,
+              y: slime.y - 1,
+              prevDirection: '0,-1',
+            };
+          }
+          break;
+      }
+    } else {
+      switch (prevDirection) {
+        case '0,-1':
+          if (this.canMoveNPC(x, y, 1, 0)) {
+            return {
+              ...slime,
+              x: slime.x + 1,
+              prevDirection: '1,0',
+            };
+          }
+          break;
+        case '1,0':
+          if (this.canMoveNPC(x, y, 0, 1)) {
+            return {
+              ...slime,
+              y: slime.y + 1,
+              prevDirection: '0,1',
+            };
+          }
+          break;
+        case '0,1':
+          if (this.canMoveNPC(x, y, -1, 0)) {
+            return {
+              ...slime,
+              x: slime.x - 1,
+              prevDirection: '-1,0',
+            };
+          }
+          break;
+        case '-1,0':
+        default:
+          if (this.canMoveNPC(x, y, 0, -1)) {
+            return {
+              ...slime,
+              y: slime.y - 1,
+              prevDirection: '0,-1',
+            };
+          }
+          break;
+      }
     }
     console.warn('slime is stuck', slime);
+    if (!isRetry) {
+      return this.moveSlime(
+        {
+          ...slime,
+          clockwise: !slime.clockwise,
+        }, true);
+    }
+
     return slime;
+  }
+
+  /**
+   * Moves in random direction
+   */
+  moveBat = (bat) => {
+    const { x, y } = bat;
+
+    const directions = randomSort([
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+    ]);
+
+    for (let i = 0; i < directions.length; i++) {
+      const [dx, dy] = directions[i];
+      if (this.canMoveNPC(x, y, dx, dy)) {
+        return {
+          ...bat,
+          x: bat.x + dx,
+          y: bat.y + dy,
+        };
+      }
+    }
+    console.warn("bat is stuck", bat);
+    return bat;
+  }
+
+  /**
+   * save game state
+   * store all state in LocalStorage
+   */
+  saveGame = () => {
+    const state = JSON.stringify(this.state);
+    localStorage.setItem('gameState', state);
   }
 
   canMoveNPC = (x, y, dx, dy) => {
@@ -264,10 +365,11 @@ class App extends React.Component {
     this.moveNPCs(() => {
       const { playerX, playerY } = this.state;
 
-      const tileKey = this.state.level[this.state.playerY][this.state.playerX];
+      const tileKey = this.getFlattenedLevel()[this.state.playerY][this.state.playerX];
       const tile = TILE_MAP[tileKey];
       console.debug('after move', { playerX, playerY, tileKey, tile });
 
+      console.log('tileKey', tileKey);
       switch (tileKey) {
         case DOWN_STAIRS_TILE.key:
           this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ - 1);
@@ -275,8 +377,15 @@ class App extends React.Component {
         case UP_STAIRS_TILE.key:
           this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ + 1);
           break;
-        case GRASS_TILE.key:
+        case FLOWER_TILE.key:
           this.collectItem(tileKey, playerX, playerY);
+          break;
+        case SLIME_TILE.key:
+        case BAT_TILE.key:
+          this.setState({
+            gameOver: true,
+            dialog: `You were attacked by a ${TILE_MAP[tileKey].name}!  Game over`,
+          });
           break;
         default:
           break;
@@ -294,7 +403,18 @@ class App extends React.Component {
 
   componentDidMount(): void {
     document.addEventListener('keydown', this.onKeyPress);
-    this.loadLevel(0, 0, 0);
+    this.loadGame();
+  }
+
+  loadGame = () => {
+    const state = localStorage.getItem('gameState');
+    if (state) {
+      this.setState(JSON.parse(state), () => {
+        this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ);
+      });
+    } else {
+      this.loadLevel(0, 0, 0);
+    }
   }
 
   onKeyPress = (e) => {
@@ -324,7 +444,11 @@ class App extends React.Component {
   }
 
   handleRight = () => {
-    const { dialog } = this.state;
+    const { dialog, gameOver } = this.state;
+    if (gameOver) {
+      this.handleGameOver();
+      return;
+    }
     if (dialog) {
       this.setState({ dialog: null });
       return;
@@ -347,6 +471,27 @@ class App extends React.Component {
     this.movePlayer(0, 1);
   }
 
+  /**
+   * When game is over, reload the page,
+   * will refresh the game state from last save
+   */
+  handleGameOver = () => {
+    window.location.reload();
+  }
+
+  /**
+   * layers npcs / player on top of level
+   */
+  getFlattenedLevel = (level = this.state.level) => {
+    const newLevel = level.map(row => row.slice());
+    // const { playerX, playerY } = this.state;
+    // newLevel[playerY][playerX] = PLAYER_TILE.key;
+    this.state.npcs.forEach(npc => {
+      newLevel[npc.y][npc.x] = npc.tile;
+    });
+    return newLevel;
+  }
+
   render() {
     const {
       level,
@@ -364,8 +509,9 @@ class App extends React.Component {
     if (!level) {
       return null;
     }
+    const layeredLevel = this.getFlattenedLevel(level);
 
-    const blockedRow = Array(level[0].length).fill(WALL_TILE.key);
+    const blockedRow = Array(layeredLevel[0].length).fill(WALL_TILE.key);
 
     const rowNorth = levelNorth ? levelNorth[levelNorth.length - 1] : blockedRow;
     const rowSouth = levelSouth ? levelSouth[0] : blockedRow;
@@ -374,7 +520,7 @@ class App extends React.Component {
 
     const visibleCells = [
       [...columnWest[0], ...rowNorth, ...columnEast[0]],
-      ...level.map((row, y) => {
+      ...layeredLevel.map((row, y) => {
         return [
           columnWest[y],
           ...row,
@@ -400,6 +546,18 @@ class App extends React.Component {
         <Grid
           cells={visibleCells}
         />
+        <table>
+          {[
+            ["X", this.state.levelX],
+            ["Y", this.state.levelY],
+            ["Z", this.state.levelZ],
+        ].map(([label, value]) => (
+          <tr>
+            <th>{label}</th>
+            <td>{value}</td>
+          </tr>
+        ))}
+        </table>
       </div>
     );
   }

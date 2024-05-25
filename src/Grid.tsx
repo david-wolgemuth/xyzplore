@@ -20,20 +20,13 @@ export function Cell({
         position: 'relative',
         width: `${CELL_WIDTH}vw`,
         height: `${CELL_HEIGHT}vw`,
-        // backgroundColor: cellData.backgroundColor,
-        // color: cellData.textColor,
-        color: cellData.backgroundColor,
-        // border: `1px solid ${cellData.backgroundColor}`,
-        // backgroundColor: cellData.backgroundColor,
-        // opacity: 0.6,
-
+        color: cellData.color,
         textAlign: 'center',
         lineHeight: `${CELL_HEIGHT}vw`,
-        // outline: '1px solid gray',
         fontSize: '6vw',
       }}
     >
-      {cellData.name[0]}
+      {cellData.display || cellData.key}
     </div>
   );
 }

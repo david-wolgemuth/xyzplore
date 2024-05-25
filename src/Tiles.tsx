@@ -1,93 +1,107 @@
 
 export const WALL_TILE = {
-  name: 'border',
-  backgroundColor: 'brown',
-  textColor: 'white',
+  name: 'wall',
+  color: '#733406',
   key: 'x',
   impassable: true,
 }
 
 export const EMPTY_TILE = {
   name: 'empty',
-  backgroundColor: '#1e1c1c',
-  textColor: 'white',
+  color: '#1e1c1c',
   key: '-',
 }
 
 export const WATER_TILE = {
   name: 'water',
-  backgroundColor: 'blue',
-  textColor: 'white',
+  color: 'royalblue',
   key: 'w',
+  display: '~',
   impassable: true,
 }
 
 export const GRASS_TILE = {
   name: 'grass',
-  backgroundColor: '#2c6d2c',
-  textColor: 'black',
+  color: '#2c6d2c',
   key: 'g',
+  display: 'ᆡ',
 }
 
 export const ROCK_TILE = {
   name: 'rock',
-  backgroundColor: 'gray',
-  textColor: 'black',
+  color: 'gray',
   key: 'r',
   impassable: true,
 }
 
 export const PLAYER_TILE = {
   name: 'player',
-  backgroundColor: 'pink',
-  color: 'black',
+  color: 'pink',
   key: 'P',
+  display: '𐀪',
   impassable: true,
 }
 
 export const NPC_TILE = {
   name: 'npc',
-  backgroundColor: 'orange',
-  color: 'black',
+  color: 'orange',
   key: 'N',
+  display: '𐂁',
   impassable: true,
   npc: true,
 }
 
+export const FLOWER_TILE = {
+  name: 'flower',
+  color: '#ff4263',
+  key: 'f',
+  display: '𐃓',
+}
+
 export const TREE_TILE = {
   name: 'tree',
-  backgroundColor: 'turquoise',
-  color: 'black',
+  color: '#00a307',
   key: 'T',
+  display: '𐃐',
 }
 
 export const HOUSE_TILE = {
   name: 'house',
-  backgroundColor: 'brown',
-  color: 'black',
+  color: 'brown',
   key: 'H',
+  display: '𐂺',
   impassable: true,
 }
 
 export const DOWN_STAIRS_TILE = {
   name: 'down-stairs',
-  backgroundColor: 'yellow',
-  color: 'black',
+  color: '#e4d01e',
   key: 'd',
+  display: '∏',
 }
 
 export const UP_STAIRS_TILE = {
   name: 'up-stairs',
-  backgroundColor: 'yellow',
-  color: 'black',
+  color: '#e4d01e',
   key: 'u',
+  display: '∏',
 }
 
 export const SLIME_TILE = {
   name: 'slime',
-  backgroundColor: 'lime',
-  color: 'black',
+  color: '#daa608',
   key: 's',
+  display: '𐂃',
+  impassable: true,
+  npc: true,
+}
+
+
+export const BAT_TILE = {
+  name: 'bat',
+  color: 'purple',
+  key: 'b',
+  display: 'ᄊ',
   impassable: true,
   npc: true,
 }
@@ -100,8 +114,10 @@ export const TILES = [
   GRASS_TILE,
   ROCK_TILE,
   PLAYER_TILE,
+  BAT_TILE,
   NPC_TILE,
   SLIME_TILE,
+  FLOWER_TILE,
   TREE_TILE,
   HOUSE_TILE,
   DOWN_STAIRS_TILE,
