@@ -19,9 +19,7 @@
   "homepage": "https://david-wolgemuth.github.io/xyzplore/",
   "scripts": {
     "start": "react-app-rewired start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "build": "react-app-rewired build"
   },
   "eslintConfig": {
     "extends": [
