@@ -558,6 +558,12 @@ class App extends React.Component {
           </tr>
         ))}
         </table>
+        <MovementButtons
+          onDown={this.handleDown}
+          onUp={this.handleUp}
+          onLeft={this.handleLeft}
+          onRight={this.handleRight}
+        />
       </div>
     );
   }
@@ -573,14 +579,62 @@ const Dialog = ({ dialog }) => (
       left: '10vw',
       right: '10vw',
       padding: '1em',
-      background: 'rgba(255, 255, 255, 0.8)',
+      background: 'rgba(73, 41, 1, 0.8)',
       border: '1px solid black',
       minHeight: '40vh',
+      color: 'floralwhite',
+      fontSize: '3em',
+      zIndex: 10,
     }}
   >
     {dialog}
   </div>
 );
+
+
+const MovementButtons = ({ onLeft, onRight, onUp, onDown }) => {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: '10vh',
+        left: '10vw',
+        right: '10vw',
+        // top: '10vh',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        fontSize: '2em',
+        opacity: 0.2,
+      }}
+    >
+      <button onClick={onUp} style={{
+        fontSize: '2em',
+          height: '12vh',
+      }}>↑</button>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          height: '12vh',
+        }}
+      >
+        <button onClick={onLeft} style={{
+          fontSize: '2em',
+          width: '40%',
+        }}>←</button>
+        <button onClick={onRight} style={{
+          fontSize: '2em',
+          width: '40%',
+        }}>→</button>
+      </div>
+        <button onClick={onDown} style={{
+          fontSize: '2em',
+          height: '12vh',
+        }}>↓</button>
+    </div>
+  );
+}
 
 
 export default App;
