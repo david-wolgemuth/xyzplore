@@ -63,6 +63,7 @@ export const TREE_TILE = {
   color: '#00a307',
   key: 'T',
   display: '𐃐',
+  impassable: true,
 }
 
 export const HOUSE_TILE = {

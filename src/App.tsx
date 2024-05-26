@@ -575,6 +575,7 @@ const MovementButtons = ({ onLeft, onRight, onUp, onDown }) => {
         justifyContent: 'space-between',
         fontSize: '2em',
         opacity: 0.2,
+        zIndex: 100,
       }}
     >
       <button onClick={onUp} style={{
