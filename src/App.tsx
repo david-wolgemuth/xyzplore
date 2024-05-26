@@ -118,26 +118,48 @@ class App extends React.Component {
     // move player to new position on the new level (if off east of map, then westmost position of new level)
     if (newPlayerX < 0) {
       newLevel = levelWest;
+      if (!newLevel) {
+        console.log('no level west');
+        return false;
+      }
       newPlayerX = newLevel[0].length - 1;
       newLevelXYZ = [levelX - 1, levelY, levelZ];
     }
     if (newPlayerX >= level[0].length) {
       newLevel = levelEast;
+      if (!newLevel) {
+        console.log('no level east');
+        return false;
+      }
       newPlayerX = 0;
       newLevelXYZ = [levelX + 1, levelY, levelZ];
     }
     if (newPlayerY < 0) {
       newLevel = levelNorth;
+      if (!newLevel) {
+        console.log('no level north');
+        return false;
+      }
       newPlayerY = newLevel.length - 1;
       newLevelXYZ = [levelX, levelY - 1, levelZ];
     }
     if (newPlayerY >= level.length) {
       newLevel = levelSouth;
+      if (!newLevel) {
+        console.log('no level south');
+        return false;
+      }
       newPlayerY = 0;
       newLevelXYZ = [levelX, levelY + 1, levelZ];
     }
 
     if (newLevel) {
+      if (newLevel[newPlayerY][newPlayerX].impassable) {
+        // do not handle impassable tiles when moving to new level,
+        // instead, just don't move
+        return false;
+      }
+
       this.loadLevel(newLevelXYZ[0], newLevelXYZ[1], newLevelXYZ[2]);
 
       this.setState({
@@ -219,98 +241,45 @@ class App extends React.Component {
   moveSlime = (slime, isRetry = false) => {
     const { x, y, prevDirection, clockwise } = slime;
     console.log('moving slime', slime);
-    if (clockwise) {
-      switch (prevDirection) {
-        case '0,-1':
-          if (this.canMoveNPC(x, y, -1, 0)) {
-            return {
-              ...slime,
-              x: slime.x - 1,
-              prevDirection: '-1,0',
-            };
-          }
-          break;
-        case '-1,0':
-          if (this.canMoveNPC(x, y, 0, 1)) {
-            return {
-              ...slime,
-              y: slime.y + 1,
-              prevDirection: '0,1',
-            };
-          }
-          break;
-        case '0,1':
-          if (this.canMoveNPC(x, y, 1, 0)) {
-            return {
-              ...slime,
-              x: slime.x + 1,
-              prevDirection:'1,0',
-            };
-          }
-          break;
-        case '1,0':
-        default:
-          if (this.canMoveNPC(x, y, 0, -1)) {
-            return {
-              ...slime,
-              y: slime.y - 1,
-              prevDirection: '0,-1',
-            };
-          }
-          break;
-      }
-    } else {
-      switch (prevDirection) {
-        case '0,-1':
-          if (this.canMoveNPC(x, y, 1, 0)) {
-            return {
-              ...slime,
-              x: slime.x + 1,
-              prevDirection: '1,0',
-            };
-          }
-          break;
-        case '1,0':
-          if (this.canMoveNPC(x, y, 0, 1)) {
-            return {
-              ...slime,
-              y: slime.y + 1,
-              prevDirection: '0,1',
-            };
-          }
-          break;
-        case '0,1':
-          if (this.canMoveNPC(x, y, -1, 0)) {
-            return {
-              ...slime,
-              x: slime.x - 1,
-              prevDirection: '-1,0',
-            };
-          }
-          break;
-        case '-1,0':
-        default:
-          if (this.canMoveNPC(x, y, 0, -1)) {
-            return {
-              ...slime,
-              y: slime.y - 1,
-              prevDirection: '0,-1',
-            };
-          }
-          break;
-      }
-    }
-    console.warn('slime is stuck', slime);
-    if (!isRetry) {
-      return this.moveSlime(
-        {
+
+    const directions = {
+      '0,-1': { x: 0, y: -1, next: clockwise ? '-1,0' : '1,0' },
+      '-1,0': { x: -1, y: 0, next: clockwise ? '0,1' : '0,-1' },
+      '0,1': { x: 0, y: 1, next: clockwise ? '1,0' : '-1,0' },
+      '1,0': { x: 1, y: 0, next: clockwise ? '0,-1' : '0,1' },
+    };
+
+    const tryMove = (dir) => {
+      const move = directions[dir];
+      if (this.canMoveNPC(x, y, move.x, move.y)) {
+        return {
           ...slime,
-          clockwise: !slime.clockwise,
-        }, true);
+          x: slime.x + move.x,
+          y: slime.y + move.y,
+          prevDirection: move.next,
+        };
+      }
+      return null;
+    };
+
+    let currentDirection = prevDirection || '0,-1';
+    for (let i = 0; i < 4; i++) {
+      const newSlime = tryMove(currentDirection);
+      if (newSlime) {
+        return newSlime;
+      }
+      currentDirection = directions[currentDirection].next;
+    }
+
+    console.warn('slime is stuck', slime);
+
+    if (!isRetry) {
+      return this.moveSlime({ ...slime, clockwise: !slime.clockwise }, true);
     }
 
     return slime;
-  }
+  };
+
 
   /**
    * Moves in random direction
