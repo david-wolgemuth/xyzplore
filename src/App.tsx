@@ -16,6 +16,7 @@ import {
 } from './Tiles';
 import { Grid } from './Grid';
 import { randomChoice, randomSort } from './utilities';
+import { PointXY, Direction, geHexGridDelta } from './directions';
 
 
 class App extends React.Component {
@@ -94,7 +95,13 @@ class App extends React.Component {
     }, cb);
   }
 
-  movePlayer = (dx, dy) => {
+  movePlayerDirection = (direction: Direction) => {
+    const { playerY } = this.state;
+    const { x: dx, y: dy } = geHexGridDelta(playerY, direction);
+    this.movePlayerByDelta(dx, dy);
+  }
+
+  movePlayerByDelta = (dx, dy) => {
     const {
       playerX,
       playerY,
@@ -154,7 +161,8 @@ class App extends React.Component {
     }
 
     if (newLevel) {
-      if (newLevel[newPlayerY][newPlayerX].impassable) {
+      const newTile = TILE_MAP[newLevel[newPlayerY][newPlayerX]];
+      if (newTile.impassable) {
         // do not handle impassable tiles when moving to new level,
         // instead, just don't move
         return false;
@@ -242,33 +250,43 @@ class App extends React.Component {
     const { x, y, prevDirection, clockwise } = slime;
     console.log('moving slime', slime);
 
-    const directions = {
-      '0,-1': { x: 0, y: -1, next: clockwise ? '-1,0' : '1,0' },
-      '-1,0': { x: -1, y: 0, next: clockwise ? '0,1' : '0,-1' },
-      '0,1': { x: 0, y: 1, next: clockwise ? '1,0' : '-1,0' },
-      '1,0': { x: 1, y: 0, next: clockwise ? '0,-1' : '0,1' },
-    };
+    const directionsList = [
+      Direction.UP_LEFT,
+      Direction.LEFT,
+      Direction.DOWN_LEFT,
+      Direction.DOWN_RIGHT,
+      Direction.RIGHT,
+      Direction.UP_RIGHT,
+    ];
+    if (clockwise) {
+      directionsList.reverse();
+    }
 
     const tryMove = (dir) => {
-      const move = directions[dir];
-      if (this.canMoveNPC(x, y, move.x, move.y)) {
+      const delta = geHexGridDelta(y, dir);
+      if (this.canMoveNPC(x, y, delta.x, delta.y)) {
         return {
           ...slime,
-          x: slime.x + move.x,
-          y: slime.y + move.y,
-          prevDirection: move.next,
+          x: slime.x + delta.x,
+          y: slime.y + delta.y,
+          prevDirection: dir,
         };
       }
       return null;
     };
 
-    let currentDirection = prevDirection || '0,-1';
-    for (let i = 0; i < 4; i++) {
-      const newSlime = tryMove(currentDirection);
+    if (prevDirection) {
+      while (directionsList[0] !== prevDirection) {
+        directionsList.push(directionsList.shift());
+      }
+      directionsList.push(directionsList.shift());
+    }
+
+    for (const direction of directionsList) {
+      const newSlime = tryMove(direction);
       if (newSlime) {
         return newSlime;
       }
-      currentDirection = directions[currentDirection].next;
     }
 
     console.warn('slime is stuck', slime);
@@ -288,19 +306,21 @@ class App extends React.Component {
     const { x, y } = bat;
 
     const directions = randomSort([
-      [0, 1],
-      [0, -1],
-      [1, 0],
-      [-1, 0],
+      Direction.UP_LEFT,
+      Direction.LEFT,
+      Direction.DOWN_LEFT,
+      Direction.DOWN_RIGHT,
+      Direction.RIGHT,
+      Direction.UP_RIGHT,
     ]);
 
-    for (let i = 0; i < directions.length; i++) {
-      const [dx, dy] = directions[i];
-      if (this.canMoveNPC(x, y, dx, dy)) {
+    for (const direction of directions) {
+      const delta = geHexGridDelta(y, direction);
+      if (this.canMoveNPC(x, y, delta.x, delta.y)) {
         return {
           ...bat,
-          x: bat.x + dx,
-          y: bat.y + dy,
+          x: bat.x + delta.x,
+          y: bat.y + delta.y,
         };
       }
     }
@@ -388,28 +408,57 @@ class App extends React.Component {
 
   onKeyPress = (e) => {
     switch (e.key) {
-      case 'ArrowLeft':
+      case 'h':
         this.handleLeft();
         break;
-      case 'ArrowRight':
+      case 'u':
+        this.handleUpLeft();
+        break;
+      case 'i':
+        this.handleUpRight();
+        break;
+      case 'k':
         this.handleRight();
         break;
-      case 'ArrowUp':
-        this.handleUp();
+      case 'm':
+        this.handleDownRight();
         break;
-      case 'ArrowDown':
-        this.handleDown();
+      case 'n':
+        this.handleDownLeft();
         break;
       default:
         break;
     }
   }
 
+  handleUpLeft = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
+    this.movePlayerDirection(Direction.UP_LEFT);
+  }
+
+  handleUpRight = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
+    this.movePlayerDirection(Direction.UP_RIGHT);
+  }
+
+  handleDownLeft = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
+    this.movePlayerDirection(Direction.DOWN_LEFT);
+  }
+
+  handleDownRight = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
+    this.movePlayerDirection(Direction.DOWN_RIGHT);
+  }
+
   handleLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    console.log('west');
-    this.movePlayer(-1, 0);
+    this.movePlayerDirection(Direction.LEFT);
   }
 
   handleRight = () => {
@@ -422,23 +471,9 @@ class App extends React.Component {
       this.setState({ dialog: null });
       return;
     }
-    console.log('east');
-    this.movePlayer(1, 0);
+    this.movePlayerDirection(Direction.RIGHT);
   }
 
-  handleUp = () => {
-    const { dialog } = this.state;
-    if (dialog) { return }
-    console.log('north');
-    this.movePlayer(0, -1);
-  }
-
-  handleDown = () => {
-    const { dialog } = this.state;
-    if (dialog) { return }
-    console.log('south');
-    this.movePlayer(0, 1);
-  }
 
   /**
    * When game is over, reload the page,
@@ -528,10 +563,12 @@ class App extends React.Component {
         ))}
         </table>
         <MovementButtons
-          onDown={this.handleDown}
-          onUp={this.handleUp}
           onLeft={this.handleLeft}
           onRight={this.handleRight}
+          onUpLeft={this.handleUpLeft}
+          onUpRight={this.handleUpRight}
+          onDownLeft={this.handleDownLeft}
+          onDownRight={this.handleDownRight}
         />
       </div>
     );
@@ -560,8 +597,7 @@ const Dialog = ({ dialog }) => (
   </div>
 );
 
-
-const MovementButtons = ({ onLeft, onRight, onUp, onDown }) => {
+const MovementButtons = ({ onLeft, onRight, onUpLeft, onUpRight, onDownLeft, onDownRight }) => {
   return (
     <div
       style={{
@@ -569,39 +605,26 @@ const MovementButtons = ({ onLeft, onRight, onUp, onDown }) => {
         bottom: '10vh',
         left: '10vw',
         right: '10vw',
-        // top: '10vh',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        alignItems: 'center',
         fontSize: '2em',
         opacity: 0.2,
         zIndex: 100,
       }}
     >
-      <button onClick={onUp} style={{
-        fontSize: '2em',
-          height: '12vh',
-      }}>↑</button>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          height: '12vh',
-        }}
-      >
-        <button onClick={onLeft} style={{
-          fontSize: '2em',
-          width: '40%',
-        }}>←</button>
-        <button onClick={onRight} style={{
-          fontSize: '2em',
-          width: '40%',
-        }}>→</button>
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+        <button onClick={onUpLeft} style={{ fontSize: '2em', width: '40%' }}>u</button>
+        <button onClick={onUpRight} style={{ fontSize: '2em', width: '40%' }}>i</button>
       </div>
-        <button onClick={onDown} style={{
-          fontSize: '2em',
-          height: '12vh',
-        }}>↓</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '1em' }}>
+        <button onClick={onLeft} style={{ fontSize: '2em', width: '40%' }}>h</button>
+        <button onClick={onRight} style={{ fontSize: '2em', width: '40%' }}>k</button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '1em' }}>
+        <button onClick={onDownLeft} style={{ fontSize: '2em', width: '40%' }}>n</button>
+        <button onClick={onDownRight} style={{ fontSize: '2em', width: '40%' }}>m</button>
+      </div>
     </div>
   );
 }

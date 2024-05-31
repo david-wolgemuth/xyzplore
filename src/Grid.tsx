@@ -3,15 +3,24 @@ import { TILE_MAP } from './Tiles';
 
 const TILES_PER_ROW = 12;
 // assume square grid
-const CELL_WIDTH = 100 / (TILES_PER_ROW + 1);
-const CELL_HEIGHT = 100 / (TILES_PER_ROW + 1);
+const CELL_WIDTH = 100 / (TILES_PER_ROW + 2);
+const CELL_HEIGHT = 100 / (TILES_PER_ROW + 2);
 
 
 export function Cell({
   cellData,
+  x,
+  y,
   widthMultiplier = 1,
   heightMultiplier = 1,
 }) {
+
+  const isBorderCell = (
+    x === 0
+    || y === 0
+    || x === TILES_PER_ROW + 1
+    || y === TILES_PER_ROW + 1
+  );
 
   return (
     <div
@@ -24,6 +33,8 @@ export function Cell({
         textAlign: 'center',
         lineHeight: `${CELL_HEIGHT}vw`,
         fontSize: '6vw',
+        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+        opacity: isBorderCell ? 0.5 : 1,
       }}
     >
       {cellData.display || cellData.key}
@@ -33,12 +44,16 @@ export function Cell({
 
 export function Row({
   cells,
+  y,
   heightMultiplier = 1,
 }) {
+  const offset = y % 2 === 0 ? 0 : CELL_WIDTH / 2;
+
   return (
     <div style={{
       display: 'flex',
       height: `${CELL_HEIGHT}vw`,
+      marginLeft: `${offset}vw`,
     }}>
       {cells.map((cell, x) => {
         const cellData = TILE_MAP[cell];
@@ -46,6 +61,8 @@ export function Row({
         return (
           <Cell
             key={x}
+            x={x}
+            y={y}
             cellData={cellData}
           />
         );
@@ -74,7 +91,7 @@ export function Grid ({
           display: 'flex',
           backgroundColor: 'black',
           flexDirection: 'column',
-          width: `${CELL_WIDTH * (TILES_PER_ROW + 2)}vw`,
+          width: `${CELL_WIDTH * (TILES_PER_ROW + 3)}vw`,
           height: `${CELL_HEIGHT * (TILES_PER_ROW + 2)}vh`,
           marginLeft: `-${CELL_WIDTH / 2}vw`,
           marginTop: `-${CELL_HEIGHT / 2}vw`,
@@ -84,6 +101,7 @@ export function Grid ({
           return (
             <Row
               key={y}
+              y={y}
               cells={row}
             />
           );
