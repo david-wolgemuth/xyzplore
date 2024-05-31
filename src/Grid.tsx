@@ -3,8 +3,8 @@ import { TILE_MAP } from './Tiles';
 
 const TILES_PER_ROW = 12;
 // assume square grid
-const CELL_WIDTH = 100 / (TILES_PER_ROW + 2);
-const CELL_HEIGHT = 100 / (TILES_PER_ROW + 2);
+const CELL_WIDTH = 100 / (TILES_PER_ROW + 1.5);
+const CELL_HEIGHT = 100 / (TILES_PER_ROW + 0.5);
 
 
 export function Cell({
@@ -33,6 +33,7 @@ export function Cell({
         textAlign: 'center',
         lineHeight: `${CELL_HEIGHT}vw`,
         fontSize: '6vw',
+        backgroundColor: '#342929',
         clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
         opacity: isBorderCell ? 0.5 : 1,
       }}
@@ -52,7 +53,7 @@ export function Row({
   return (
     <div style={{
       display: 'flex',
-      height: `${CELL_HEIGHT}vw`,
+      height: `${CELL_HEIGHT * 0.76}vw`,
       marginLeft: `${offset}vw`,
     }}>
       {cells.map((cell, x) => {

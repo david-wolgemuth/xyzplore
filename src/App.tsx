@@ -617,11 +617,11 @@ const MovementButtons = ({ onLeft, onRight, onUpLeft, onUpRight, onDownLeft, onD
         <button onClick={onUpLeft} style={{ fontSize: '2em', width: '40%' }}>u</button>
         <button onClick={onUpRight} style={{ fontSize: '2em', width: '40%' }}>i</button>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '1em' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
         <button onClick={onLeft} style={{ fontSize: '2em', width: '40%' }}>h</button>
         <button onClick={onRight} style={{ fontSize: '2em', width: '40%' }}>k</button>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '1em' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
         <button onClick={onDownLeft} style={{ fontSize: '2em', width: '40%' }}>n</button>
         <button onClick={onDownRight} style={{ fontSize: '2em', width: '40%' }}>m</button>
       </div>
