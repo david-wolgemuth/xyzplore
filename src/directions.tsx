@@ -8,6 +8,15 @@ export enum Direction {
   RIGHT = 'RIGHT',
 }
 
+export const DIRECTIONS = [
+  Direction.UP_LEFT,
+  Direction.UP_RIGHT,
+  Direction.DOWN_LEFT,
+  Direction.DOWN_RIGHT,
+  Direction.LEFT,
+  Direction.RIGHT,
+];
+
 
 export type PointXY = {
   x: number;
@@ -15,7 +24,7 @@ export type PointXY = {
 }
 
 
-export function geHexGridDelta(currentY: number, direction: Direction): PointXY {
+export function getHexGridDelta(currentY: number, direction: Direction): PointXY {
   switch (direction) {
     case Direction.UP_LEFT:
       return {

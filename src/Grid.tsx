@@ -1,6 +1,5 @@
 import { TILE_MAP } from './Tiles';
 
-
 const TILES_PER_ROW = 12;
 // assume square grid
 const CELL_WIDTH = 100 / (TILES_PER_ROW + 1.5);
@@ -24,7 +23,7 @@ export function Cell({
 
   return (
     <div
-      className="cell"
+      className="Cell"
       style={{
         position: 'relative',
         width: `${CELL_WIDTH}vw`,
@@ -32,13 +31,15 @@ export function Cell({
         color: cellData.color,
         textAlign: 'center',
         lineHeight: `${CELL_HEIGHT}vw`,
-        fontSize: '6vw',
+        // fontSize: '6vw',
+        fontSize: '3vw',
         backgroundColor: '#342929',
         clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-        opacity: isBorderCell ? 0.5 : 1,
+        opacity: cellData.lightLevel,
       }}
     >
       {cellData.display || cellData.key}
+      {/* {cellData.lightLevel} */}
     </div>
   );
 }
@@ -51,20 +52,22 @@ export function Row({
   const offset = y % 2 === 0 ? 0 : CELL_WIDTH / 2;
 
   return (
-    <div style={{
-      display: 'flex',
-      height: `${CELL_HEIGHT * 0.76}vw`,
-      marginLeft: `${offset}vw`,
-    }}>
+    <div
+      className="Row"
+      style={{
+        display: 'flex',
+        height: `${CELL_HEIGHT * 0.76}vw`,
+        marginLeft: `${offset}vw`,
+      }}
+    >
       {cells.map((cell, x) => {
-        const cellData = TILE_MAP[cell];
 
         return (
           <Cell
             key={x}
             x={x}
             y={y}
-            cellData={cellData}
+            cellData={cell}
           />
         );
       })}
@@ -78,6 +81,7 @@ export function Grid ({
 
   return (
     <div
+      className="Grid"
       style={{
         overflow: 'hidden',
         width: '100vw',
@@ -90,7 +94,7 @@ export function Grid ({
       <div
         style={{
           display: 'flex',
-          backgroundColor: 'black',
+          // backgroundColor: 'black',
           flexDirection: 'column',
           width: `${CELL_WIDTH * (TILES_PER_ROW + 3)}vw`,
           height: `${CELL_HEIGHT * (TILES_PER_ROW + 2)}vh`,

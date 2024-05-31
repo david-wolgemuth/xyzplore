@@ -1,5 +1,4 @@
 import React from 'react';
-import './App.css';
 
 import {
   TILE_MAP,
@@ -16,7 +15,8 @@ import {
 } from './Tiles';
 import { Grid } from './Grid';
 import { randomChoice, randomSort } from './utilities';
-import { PointXY, Direction, geHexGridDelta } from './directions';
+import { PointXY, Direction, getHexGridDelta } from './directions';
+import { getLightLevels } from './lighting';
 
 
 class App extends React.Component {
@@ -97,7 +97,7 @@ class App extends React.Component {
 
   movePlayerDirection = (direction: Direction) => {
     const { playerY } = this.state;
-    const { x: dx, y: dy } = geHexGridDelta(playerY, direction);
+    const { x: dx, y: dy } = getHexGridDelta(playerY, direction);
     this.movePlayerByDelta(dx, dy);
   }
 
@@ -177,10 +177,10 @@ class App extends React.Component {
       return true;
 
     } else {
-      const newTileKey = this.getFlattenedLevel()[newPlayerY][newPlayerX];
+      const newCell = this.getCells()[newPlayerY][newPlayerX];
 
-      if (TILE_MAP[newTileKey].impassable) {
-        this.handleHitImpassableTile(newTileKey, newPlayerX, newPlayerY);
+      if (newCell.impassable) {
+        this.handleHitImpassableTile(newCell.key, newPlayerX, newPlayerY);
         return false;
       }
 
@@ -263,7 +263,7 @@ class App extends React.Component {
     }
 
     const tryMove = (dir) => {
-      const delta = geHexGridDelta(y, dir);
+      const delta = getHexGridDelta(y, dir);
       if (this.canMoveNPC(x, y, delta.x, delta.y)) {
         return {
           ...slime,
@@ -315,7 +315,7 @@ class App extends React.Component {
     ]);
 
     for (const direction of directions) {
-      const delta = geHexGridDelta(y, direction);
+      const delta = getHexGridDelta(y, direction);
       if (this.canMoveNPC(x, y, delta.x, delta.y)) {
         return {
           ...bat,
@@ -354,12 +354,9 @@ class App extends React.Component {
     this.moveNPCs(() => {
       const { playerX, playerY } = this.state;
 
-      const tileKey = this.getFlattenedLevel()[this.state.playerY][this.state.playerX];
-      const tile = TILE_MAP[tileKey];
-      console.debug('after move', { playerX, playerY, tileKey, tile });
-
-      console.log('tileKey', tileKey);
-      switch (tileKey) {
+      const tile = this.getCells()[this.state.playerY][this.state.playerX];
+      console.log('after move', tile);
+      switch (tile.key) {
         case DOWN_STAIRS_TILE.key:
           this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ - 1);
           break;
@@ -367,13 +364,13 @@ class App extends React.Component {
           this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ + 1);
           break;
         case FLOWER_TILE.key:
-          this.collectItem(tileKey, playerX, playerY);
+          this.collectItem(tile.key, playerX, playerY);
           break;
         case SLIME_TILE.key:
         case BAT_TILE.key:
           this.setState({
             gameOver: true,
-            dialog: `You were attacked by a ${TILE_MAP[tileKey].name}!  Game over`,
+            dialog: `You were attacked by a ${tile.name}!  Game over`,
           });
           break;
         default:
@@ -486,69 +483,118 @@ class App extends React.Component {
   /**
    * layers npcs / player on top of level
    */
-  getFlattenedLevel = (level = this.state.level) => {
-    const newLevel = level.map(row => row.slice());
-    // const { playerX, playerY } = this.state;
-    // newLevel[playerY][playerX] = PLAYER_TILE.key;
+  getCells = (level = this.state.level) => {
+    const cellsCopy = level.map(row => row.slice());
+
+    // set npcs
     this.state.npcs.forEach(npc => {
-      newLevel[npc.y][npc.x] = npc.tile;
+      cellsCopy[npc.y][npc.x] = npc.tile;
     });
-    return newLevel;
+
+    return cellsCopy.map((row, y) => {
+      return row.map((cellKey, x) => {
+        return {
+          ...TILE_MAP[cellKey],
+          x,
+          y,
+        };
+      });
+    })
   }
 
-  render() {
+  getVisibleCells = () => {
     const {
       level,
-      playerX,
-      playerY,
-
       levelNorth,
       levelSouth,
       levelWest,
       levelEast,
-
-      dialog,
+      playerX,
+      playerY,
     } = this.state;
 
     if (!level) {
       return null;
     }
-    const layeredLevel = this.getFlattenedLevel(level);
 
-    const blockedRow = Array(layeredLevel[0].length).fill(WALL_TILE.key);
+    const cells = this.getCells();
+
+    // set player
+    cells[playerY][playerX] = {...PLAYER_TILE};
+
+    const blockedRow = Array(cells[0].length).fill(WALL_TILE.key);
 
     const rowNorth = levelNorth ? levelNorth[levelNorth.length - 1] : blockedRow;
     const rowSouth = levelSouth ? levelSouth[0] : blockedRow;
     const columnWest = levelWest ? levelWest.map(row => row[row.length - 1]) : blockedRow;
     const columnEast = levelEast ? levelEast.map(row => row[0]) : blockedRow;
 
+    const addData = (cellKey) => TILE_MAP[cellKey || EMPTY_TILE.key];
+
     const visibleCells = [
-      [...columnWest[0], ...rowNorth, ...columnEast[0]],
-      ...layeredLevel.map((row, y) => {
+      // Top Row
+      [
+        ...columnWest[0],
+        ...rowNorth,
+        ...columnEast[0],
+      ].map(addData),
+
+      // Body
+      ...cells.map((row, y) => {
         return [
-          columnWest[y],
+          // Left Column Cell
+          addData(columnWest[y]),
           ...row,
-          columnEast[y],
+          // Right Column Cell
+          addData(columnEast[y]),
         ];
       }),
-      [...columnWest[columnWest.length - 1], ...rowSouth, ...columnEast[columnEast.length - 1]],
-    ];
 
-    visibleCells[playerY + 1][playerX + 1] = PLAYER_TILE.key;
+      // Bottom Row
+      [
+        ...columnWest[columnWest.length - 1],
+        ...rowSouth,
+        ...columnEast[columnEast.length - 1],
+      ].map(addData),
+    ].map((row, y) => {
+      return row.map((cell, x) => {
+        return {
+          ...cell,
+          visibleX: x,
+          visibleY: y,
+        };
+      });
+    });
 
-    for (let y = 0; y < visibleCells.length; y++) {
-      for (let x = 0; x < visibleCells[y].length; x++) {
-        if (!visibleCells[y][x]) {
-          visibleCells[y][x] = EMPTY_TILE.key;
-        }
-      }
+    const cellsWithLight = getLightLevels(visibleCells);
+
+    return cellsWithLight;
+  }
+
+  render() {
+    const {
+      level,
+      dialog,
+    } = this.state;
+
+    if (!level) {
+      return null;
     }
 
+    const cells = this.getVisibleCells();
+
     return (
-      <div>
+      <div
+        className="App"
+        style={{
+          backgroundColor: '#1a1515',
+          height: '100vh',
+          width: '100vw',
+        }}
+      >
         <Dialog dialog={dialog} />
         <Grid
-          cells={visibleCells}
+          cells={cells}
         />
         <table>
           {[
@@ -578,6 +624,7 @@ class App extends React.Component {
 
 const Dialog = ({ dialog }) => (
   <div
+    className="Dialog"
     style={{
       display: dialog ? 'block' : 'none',
       position: 'absolute',
@@ -600,6 +647,7 @@ const Dialog = ({ dialog }) => (
 const MovementButtons = ({ onLeft, onRight, onUpLeft, onUpRight, onDownLeft, onDownRight }) => {
   return (
     <div
+      className="MovementButtons"
       style={{
         position: 'absolute',
         bottom: '10vh',
