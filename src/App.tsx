@@ -1,5 +1,4 @@
 import React from 'react';
-import './App.css';
 
 import {
   TILE_MAP,
@@ -16,6 +15,8 @@ import {
 } from './Tiles';
 import { Grid } from './Grid';
 import { randomChoice, randomSort } from './utilities';
+import { PointXY, Direction, getHexGridDelta } from './directions';
+import { getLightLevels } from './lighting';
 
 
 class App extends React.Component {
@@ -94,7 +95,13 @@ class App extends React.Component {
     }, cb);
   }
 
-  movePlayer = (dx, dy) => {
+  movePlayerDirection = (direction: Direction) => {
+    const { playerY } = this.state;
+    const { x: dx, y: dy } = getHexGridDelta(playerY, direction);
+    this.movePlayerByDelta(dx, dy);
+  }
+
+  movePlayerByDelta = (dx, dy) => {
     const {
       playerX,
       playerY,
@@ -118,26 +125,49 @@ class App extends React.Component {
     // move player to new position on the new level (if off east of map, then westmost position of new level)
     if (newPlayerX < 0) {
       newLevel = levelWest;
+      if (!newLevel) {
+        console.log('no level west');
+        return false;
+      }
       newPlayerX = newLevel[0].length - 1;
       newLevelXYZ = [levelX - 1, levelY, levelZ];
     }
     if (newPlayerX >= level[0].length) {
       newLevel = levelEast;
+      if (!newLevel) {
+        console.log('no level east');
+        return false;
+      }
       newPlayerX = 0;
       newLevelXYZ = [levelX + 1, levelY, levelZ];
     }
     if (newPlayerY < 0) {
       newLevel = levelNorth;
+      if (!newLevel) {
+        console.log('no level north');
+        return false;
+      }
       newPlayerY = newLevel.length - 1;
       newLevelXYZ = [levelX, levelY - 1, levelZ];
     }
     if (newPlayerY >= level.length) {
       newLevel = levelSouth;
+      if (!newLevel) {
+        console.log('no level south');
+        return false;
+      }
       newPlayerY = 0;
       newLevelXYZ = [levelX, levelY + 1, levelZ];
     }
 
     if (newLevel) {
+      const newTile = TILE_MAP[newLevel[newPlayerY][newPlayerX]];
+      if (newTile.impassable) {
+        // do not handle impassable tiles when moving to new level,
+        // instead, just don't move
+        return false;
+      }
+
       this.loadLevel(newLevelXYZ[0], newLevelXYZ[1], newLevelXYZ[2]);
 
       this.setState({
@@ -147,10 +177,10 @@ class App extends React.Component {
       return true;
 
     } else {
-      const newTileKey = this.getFlattenedLevel()[newPlayerY][newPlayerX];
+      const newCell = this.getCells()[newPlayerY][newPlayerX];
 
-      if (TILE_MAP[newTileKey].impassable) {
-        this.handleHitImpassableTile(newTileKey, newPlayerX, newPlayerY);
+      if (newCell.impassable) {
+        this.handleHitImpassableTile(newCell.key, newPlayerX, newPlayerY);
         return false;
       }
 
@@ -219,98 +249,55 @@ class App extends React.Component {
   moveSlime = (slime, isRetry = false) => {
     const { x, y, prevDirection, clockwise } = slime;
     console.log('moving slime', slime);
+
+    const directionsList = [
+      Direction.UP_LEFT,
+      Direction.LEFT,
+      Direction.DOWN_LEFT,
+      Direction.DOWN_RIGHT,
+      Direction.RIGHT,
+      Direction.UP_RIGHT,
+    ];
     if (clockwise) {
-      switch (prevDirection) {
-        case '0,-1':
-          if (this.canMoveNPC(x, y, -1, 0)) {
-            return {
-              ...slime,
-              x: slime.x - 1,
-              prevDirection: '-1,0',
-            };
-          }
-          break;
-        case '-1,0':
-          if (this.canMoveNPC(x, y, 0, 1)) {
-            return {
-              ...slime,
-              y: slime.y + 1,
-              prevDirection: '0,1',
-            };
-          }
-          break;
-        case '0,1':
-          if (this.canMoveNPC(x, y, 1, 0)) {
-            return {
-              ...slime,
-              x: slime.x + 1,
-              prevDirection:'1,0',
-            };
-          }
-          break;
-        case '1,0':
-        default:
-          if (this.canMoveNPC(x, y, 0, -1)) {
-            return {
-              ...slime,
-              y: slime.y - 1,
-              prevDirection: '0,-1',
-            };
-          }
-          break;
+      directionsList.reverse();
+    }
+
+    const tryMove = (dir) => {
+      const delta = getHexGridDelta(y, dir);
+      if (this.canMoveNPC(x, y, delta.x, delta.y)) {
+        return {
+          ...slime,
+          x: slime.x + delta.x,
+          y: slime.y + delta.y,
+          prevDirection: dir,
+        };
       }
-    } else {
-      switch (prevDirection) {
-        case '0,-1':
-          if (this.canMoveNPC(x, y, 1, 0)) {
-            return {
-              ...slime,
-              x: slime.x + 1,
-              prevDirection: '1,0',
-            };
-          }
-          break;
-        case '1,0':
-          if (this.canMoveNPC(x, y, 0, 1)) {
-            return {
-              ...slime,
-              y: slime.y + 1,
-              prevDirection: '0,1',
-            };
-          }
-          break;
-        case '0,1':
-          if (this.canMoveNPC(x, y, -1, 0)) {
-            return {
-              ...slime,
-              x: slime.x - 1,
-              prevDirection: '-1,0',
-            };
-          }
-          break;
-        case '-1,0':
-        default:
-          if (this.canMoveNPC(x, y, 0, -1)) {
-            return {
-              ...slime,
-              y: slime.y - 1,
-              prevDirection: '0,-1',
-            };
-          }
-          break;
+      return null;
+    };
+
+    if (prevDirection) {
+      while (directionsList[0] !== prevDirection) {
+        directionsList.push(directionsList.shift());
+      }
+      directionsList.push(directionsList.shift());
+    }
+
+    for (const direction of directionsList) {
+      const newSlime = tryMove(direction);
+      if (newSlime) {
+        return newSlime;
       }
     }
+
     console.warn('slime is stuck', slime);
+
     if (!isRetry) {
-      return this.moveSlime(
-        {
-          ...slime,
-          clockwise: !slime.clockwise,
-        }, true);
+      return this.moveSlime({ ...slime, clockwise: !slime.clockwise }, true);
     }
 
     return slime;
-  }
+  };
+
 
   /**
    * Moves in random direction
@@ -319,19 +306,21 @@ class App extends React.Component {
     const { x, y } = bat;
 
     const directions = randomSort([
-      [0, 1],
-      [0, -1],
-      [1, 0],
-      [-1, 0],
+      Direction.UP_LEFT,
+      Direction.LEFT,
+      Direction.DOWN_LEFT,
+      Direction.DOWN_RIGHT,
+      Direction.RIGHT,
+      Direction.UP_RIGHT,
     ]);
 
-    for (let i = 0; i < directions.length; i++) {
-      const [dx, dy] = directions[i];
-      if (this.canMoveNPC(x, y, dx, dy)) {
+    for (const direction of directions) {
+      const delta = getHexGridDelta(y, direction);
+      if (this.canMoveNPC(x, y, delta.x, delta.y)) {
         return {
           ...bat,
-          x: bat.x + dx,
-          y: bat.y + dy,
+          x: bat.x + delta.x,
+          y: bat.y + delta.y,
         };
       }
     }
@@ -365,12 +354,9 @@ class App extends React.Component {
     this.moveNPCs(() => {
       const { playerX, playerY } = this.state;
 
-      const tileKey = this.getFlattenedLevel()[this.state.playerY][this.state.playerX];
-      const tile = TILE_MAP[tileKey];
-      console.debug('after move', { playerX, playerY, tileKey, tile });
-
-      console.log('tileKey', tileKey);
-      switch (tileKey) {
+      const tile = this.getCells()[this.state.playerY][this.state.playerX];
+      console.log('after move', tile);
+      switch (tile.key) {
         case DOWN_STAIRS_TILE.key:
           this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ - 1);
           break;
@@ -378,13 +364,13 @@ class App extends React.Component {
           this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ + 1);
           break;
         case FLOWER_TILE.key:
-          this.collectItem(tileKey, playerX, playerY);
+          this.collectItem(tile.key, playerX, playerY);
           break;
         case SLIME_TILE.key:
         case BAT_TILE.key:
           this.setState({
             gameOver: true,
-            dialog: `You were attacked by a ${TILE_MAP[tileKey].name}!  Game over`,
+            dialog: `You were attacked by a ${tile.name}!  Game over`,
           });
           break;
         default:
@@ -419,28 +405,57 @@ class App extends React.Component {
 
   onKeyPress = (e) => {
     switch (e.key) {
-      case 'ArrowLeft':
+      case 'h':
         this.handleLeft();
         break;
-      case 'ArrowRight':
+      case 'u':
+        this.handleUpLeft();
+        break;
+      case 'i':
+        this.handleUpRight();
+        break;
+      case 'k':
         this.handleRight();
         break;
-      case 'ArrowUp':
-        this.handleUp();
+      case 'm':
+        this.handleDownRight();
         break;
-      case 'ArrowDown':
-        this.handleDown();
+      case 'n':
+        this.handleDownLeft();
         break;
       default:
         break;
     }
   }
 
+  handleUpLeft = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
+    this.movePlayerDirection(Direction.UP_LEFT);
+  }
+
+  handleUpRight = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
+    this.movePlayerDirection(Direction.UP_RIGHT);
+  }
+
+  handleDownLeft = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
+    this.movePlayerDirection(Direction.DOWN_LEFT);
+  }
+
+  handleDownRight = () => {
+    const { dialog } = this.state;
+    if (dialog) { return }
+    this.movePlayerDirection(Direction.DOWN_RIGHT);
+  }
+
   handleLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    console.log('west');
-    this.movePlayer(-1, 0);
+    this.movePlayerDirection(Direction.LEFT);
   }
 
   handleRight = () => {
@@ -453,23 +468,9 @@ class App extends React.Component {
       this.setState({ dialog: null });
       return;
     }
-    console.log('east');
-    this.movePlayer(1, 0);
+    this.movePlayerDirection(Direction.RIGHT);
   }
 
-  handleUp = () => {
-    const { dialog } = this.state;
-    if (dialog) { return }
-    console.log('north');
-    this.movePlayer(0, -1);
-  }
-
-  handleDown = () => {
-    const { dialog } = this.state;
-    if (dialog) { return }
-    console.log('south');
-    this.movePlayer(0, 1);
-  }
 
   /**
    * When game is over, reload the page,
@@ -482,69 +483,118 @@ class App extends React.Component {
   /**
    * layers npcs / player on top of level
    */
-  getFlattenedLevel = (level = this.state.level) => {
-    const newLevel = level.map(row => row.slice());
-    // const { playerX, playerY } = this.state;
-    // newLevel[playerY][playerX] = PLAYER_TILE.key;
+  getCells = (level = this.state.level) => {
+    const cellsCopy = level.map(row => row.slice());
+
+    // set npcs
     this.state.npcs.forEach(npc => {
-      newLevel[npc.y][npc.x] = npc.tile;
+      cellsCopy[npc.y][npc.x] = npc.tile;
     });
-    return newLevel;
+
+    return cellsCopy.map((row, y) => {
+      return row.map((cellKey, x) => {
+        return {
+          ...TILE_MAP[cellKey],
+          x,
+          y,
+        };
+      });
+    })
   }
 
-  render() {
+  getVisibleCells = () => {
     const {
       level,
-      playerX,
-      playerY,
-
       levelNorth,
       levelSouth,
       levelWest,
       levelEast,
-
-      dialog,
+      playerX,
+      playerY,
     } = this.state;
 
     if (!level) {
       return null;
     }
-    const layeredLevel = this.getFlattenedLevel(level);
 
-    const blockedRow = Array(layeredLevel[0].length).fill(WALL_TILE.key);
+    const cells = this.getCells();
+
+    // set player
+    cells[playerY][playerX] = {...PLAYER_TILE};
+
+    const blockedRow = Array(cells[0].length).fill(WALL_TILE.key);
 
     const rowNorth = levelNorth ? levelNorth[levelNorth.length - 1] : blockedRow;
     const rowSouth = levelSouth ? levelSouth[0] : blockedRow;
     const columnWest = levelWest ? levelWest.map(row => row[row.length - 1]) : blockedRow;
     const columnEast = levelEast ? levelEast.map(row => row[0]) : blockedRow;
 
+    const addData = (cellKey) => TILE_MAP[cellKey || EMPTY_TILE.key];
+
     const visibleCells = [
-      [...columnWest[0], ...rowNorth, ...columnEast[0]],
-      ...layeredLevel.map((row, y) => {
+      // Top Row
+      [
+        ...columnWest[0],
+        ...rowNorth,
+        ...columnEast[0],
+      ].map(addData),
+
+      // Body
+      ...cells.map((row, y) => {
         return [
-          columnWest[y],
+          // Left Column Cell
+          addData(columnWest[y]),
           ...row,
-          columnEast[y],
+          // Right Column Cell
+          addData(columnEast[y]),
         ];
       }),
-      [...columnWest[columnWest.length - 1], ...rowSouth, ...columnEast[columnEast.length - 1]],
-    ];
 
-    visibleCells[playerY + 1][playerX + 1] = PLAYER_TILE.key;
+      // Bottom Row
+      [
+        ...columnWest[columnWest.length - 1],
+        ...rowSouth,
+        ...columnEast[columnEast.length - 1],
+      ].map(addData),
+    ].map((row, y) => {
+      return row.map((cell, x) => {
+        return {
+          ...cell,
+          visibleX: x,
+          visibleY: y,
+        };
+      });
+    });
 
-    for (let y = 0; y < visibleCells.length; y++) {
-      for (let x = 0; x < visibleCells[y].length; x++) {
-        if (!visibleCells[y][x]) {
-          visibleCells[y][x] = EMPTY_TILE.key;
-        }
-      }
+    const cellsWithLight = getLightLevels(visibleCells);
+
+    return cellsWithLight;
+  }
+
+  render() {
+    const {
+      level,
+      dialog,
+    } = this.state;
+
+    if (!level) {
+      return null;
     }
 
+    const cells = this.getVisibleCells();
+
     return (
-      <div>
+      <div
+        className="App"
+        style={{
+          backgroundColor: '#1a1515',
+          height: '100vh',
+          width: '100vw',
+        }}
+      >
         <Dialog dialog={dialog} />
         <Grid
-          cells={visibleCells}
+          cells={cells}
         />
         <table>
           {[
@@ -558,6 +608,14 @@ class App extends React.Component {
           </tr>
         ))}
         </table>
+        <MovementButtons
+          onLeft={this.handleLeft}
+          onRight={this.handleRight}
+          onUpLeft={this.handleUpLeft}
+          onUpRight={this.handleUpRight}
+          onDownLeft={this.handleDownLeft}
+          onDownRight={this.handleDownRight}
+        />
       </div>
     );
   }
@@ -566,6 +624,7 @@ class App extends React.Component {
 
 const Dialog = ({ dialog }) => (
   <div
+    className="Dialog"
     style={{
       display: dialog ? 'block' : 'none',
       position: 'absolute',
@@ -573,14 +632,50 @@ const Dialog = ({ dialog }) => (
       left: '10vw',
       right: '10vw',
       padding: '1em',
-      background: 'rgba(255, 255, 255, 0.8)',
+      background: 'rgba(73, 41, 1, 0.8)',
       border: '1px solid black',
       minHeight: '40vh',
+      color: 'floralwhite',
+      fontSize: '3em',
+      zIndex: 10,
     }}
   >
     {dialog}
   </div>
 );
+
+const MovementButtons = ({ onLeft, onRight, onUpLeft, onUpRight, onDownLeft, onDownRight }) => {
+  return (
+    <div
+      className="MovementButtons"
+      style={{
+        position: 'absolute',
+        bottom: '10vh',
+        left: '10vw',
+        right: '10vw',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        fontSize: '2em',
+        opacity: 0.2,
+        zIndex: 100,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+        <button onClick={onUpLeft} style={{ fontSize: '2em', width: '40%' }}>u</button>
+        <button onClick={onUpRight} style={{ fontSize: '2em', width: '40%' }}>i</button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+        <button onClick={onLeft} style={{ fontSize: '2em', width: '40%' }}>h</button>
+        <button onClick={onRight} style={{ fontSize: '2em', width: '40%' }}>k</button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+        <button onClick={onDownLeft} style={{ fontSize: '2em', width: '40%' }}>n</button>
+        <button onClick={onDownRight} style={{ fontSize: '2em', width: '40%' }}>m</button>
+      </div>
+    </div>
+  );
+}
 
 
 export default App;

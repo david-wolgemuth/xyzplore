@@ -4,6 +4,7 @@ export const WALL_TILE = {
   color: '#733406',
   key: 'x',
   impassable: true,
+  opacity: 1.0,
 }
 
 export const EMPTY_TILE = {
@@ -32,6 +33,7 @@ export const ROCK_TILE = {
   color: 'gray',
   key: 'r',
   impassable: true,
+  opacity: 0.8,
 }
 
 export const PLAYER_TILE = {
@@ -40,6 +42,7 @@ export const PLAYER_TILE = {
   key: 'P',
   display: '𐀪',
   impassable: true,
+  lightLevel: 8.0,
 }
 
 export const NPC_TILE = {
@@ -63,6 +66,8 @@ export const TREE_TILE = {
   color: '#00a307',
   key: 'T',
   display: '𐃐',
+  impassable: true,
+  opacity: 0.8,
 }
 
 export const HOUSE_TILE = {
@@ -71,6 +76,7 @@ export const HOUSE_TILE = {
   key: 'H',
   display: '𐂺',
   impassable: true,
+  opacity: 0.8,
 }
 
 export const DOWN_STAIRS_TILE = {
@@ -107,6 +113,15 @@ export const BAT_TILE = {
 }
 
 
+export const TORCH_TILE = {
+  name: 'torch',
+  color: 'yellow',
+  key: 't',
+  display: '𐂘',
+  lightLevel: 1.0,
+}
+
+
 export const TILES = [
   WALL_TILE,
   EMPTY_TILE,
@@ -122,6 +137,7 @@ export const TILES = [
   HOUSE_TILE,
   DOWN_STAIRS_TILE,
   UP_STAIRS_TILE,
+  TORCH_TILE,
 ]
 
 export const TILE_MAP = TILES.reduce((acc, tile) => {
