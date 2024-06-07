@@ -22,12 +22,16 @@ export function Cell({
     || y === TILES_PER_ROW + 1
   );
 
+  let color = cellData.color;
   let backgroundColor = '#97D6A0';  // green / grassy
+  let body = cellData.display || cellData.key;
   backgroundColor = '#D6B8A4';  // dirt / sand
 
   if (z < 0) {
     backgroundColor = '#342929';
   }
+
+  // console.log(cellData.key)
 
   switch(cellData.key) {
     case 'w':// TILE_MAP.WATER_TILE.key:
@@ -38,6 +42,15 @@ export function Cell({
       break;
     case 'T':
       backgroundColor = '#1B6D36'; //'var(--green-related-1)';
+      break;
+    case 'P':
+      color = '#3A5069';  // player dark
+      break;
+    case 'N':
+      color = '#3A5069';  // player dark
+      break;
+    case '-':
+      body = '';
       break;
     default:
       break;
@@ -50,19 +63,22 @@ export function Cell({
         position: 'relative',
         width: `${CELL_WIDTH}vw`,
         height: `${CELL_HEIGHT}vw`,
-        color: cellData.color,
+        color: color,
         textAlign: 'center',
         lineHeight: `${CELL_HEIGHT}vw`,
         // fontSize: '6vw',
-        fontSize: '3vw',
+        fontSize: '4.5vw',
+        fontWeight: 'bolder',
         backgroundColor: backgroundColor,
+        // TODO - let font go out of clip?
         clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
 
-        // TODO - Light Levels / Shading
-        // opacity: cellData.lightLevel,
+        // Light Levels / Shading only Apply Underground
+        // (todo - moderate light level above ground?)
+        opacity: z < 0 ? cellData.lightLevel : 'unset',
       }}
     >
-      {cellData.display || cellData.key}
+      {body}
       {/* {cellData.lightLevel} */}
     </div>
   );
