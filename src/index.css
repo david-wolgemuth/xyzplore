@@ -11,3 +11,29 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+:root {
+  /* Orange Color Scheme */
+  --orange-primary: #D6B8A4;
+  --orange-related-1: #FFA500; /* Orange */
+  --orange-related-2: #FF8C00; /* Dark Orange */
+  --orange-related-3: #FF4500; /* Orange Red */
+
+  /* Red Color Scheme */
+  --red-primary: #AB9482;
+  --red-related-1: #FF0000; /* Red */
+  --red-related-2: #DC143C; /* Crimson */
+  --red-related-3: #B22222; /* Firebrick */
+
+  /* Green Color Scheme */
+  --green-primary: #388E50;
+  --green-related-1: #008000; /* Green */
+  --green-related-2: #32CD32; /* Lime Green */
+  --green-related-3: #228B22; /* Forest Green */
+
+  /* Blue Color Scheme */
+  --blue-primary: #6D8AA3;
+  --blue-related-1: #0000FF; /* Blue */
+  --blue-related-2: #1E90FF; /* Dodger Blue */
+  --blue-related-3: #4682B4; /* Steel Blue */
+}

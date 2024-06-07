@@ -10,6 +10,7 @@ export function Cell({
   cellData,
   x,
   y,
+  z,
   widthMultiplier = 1,
   heightMultiplier = 1,
 }) {
@@ -20,6 +21,27 @@ export function Cell({
     || x === TILES_PER_ROW + 1
     || y === TILES_PER_ROW + 1
   );
+
+  let backgroundColor = '#97D6A0';  // green / grassy
+  backgroundColor = '#D6B8A4';  // dirt / sand
+
+  if (z < 0) {
+    backgroundColor = '#342929';
+  }
+
+  switch(cellData.key) {
+    case 'w':// TILE_MAP.WATER_TILE.key:
+      backgroundColor = '#6D8AA3'; // 'var(--blue-primary)';
+      break;
+    case 'g':
+      backgroundColor = '#67B475'; // 'var(--green-related-2)';
+      break;
+    case 'T':
+      backgroundColor = '#1B6D36'; //'var(--green-related-1)';
+      break;
+    default:
+      break;
+  }
 
   return (
     <div
@@ -33,9 +55,11 @@ export function Cell({
         lineHeight: `${CELL_HEIGHT}vw`,
         // fontSize: '6vw',
         fontSize: '3vw',
-        backgroundColor: '#342929',
+        backgroundColor: backgroundColor,
         clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-        opacity: cellData.lightLevel,
+
+        // TODO - Light Levels / Shading
+        // opacity: cellData.lightLevel,
       }}
     >
       {cellData.display || cellData.key}
@@ -47,6 +71,7 @@ export function Cell({
 export function Row({
   cells,
   y,
+  z,
   heightMultiplier = 1,
 }) {
   const offset = y % 2 === 0 ? 0 : CELL_WIDTH / 2;
@@ -67,6 +92,7 @@ export function Row({
             key={x}
             x={x}
             y={y}
+            z={z}
             cellData={cell}
           />
         );
@@ -77,6 +103,7 @@ export function Row({
 
 export function Grid ({
   cells,
+  z,
 }) {
 
   return (
@@ -107,6 +134,7 @@ export function Grid ({
             <Row
               key={y}
               y={y}
+              z={z}
               cells={row}
             />
           );
