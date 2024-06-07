@@ -35,7 +35,7 @@ class App extends React.Component {
     inventory: {},
     npcs: [],
 
-    playerX: 2,
+    playerX: 7,
     playerY: 5,
 
     dialog: null,
@@ -575,6 +575,7 @@ class App extends React.Component {
     const {
       level,
       dialog,
+      levelZ,
     } = this.state;
 
     if (!level) {
@@ -595,6 +596,7 @@ class App extends React.Component {
         <Dialog dialog={dialog} />
         <Grid
           cells={cells}
+          z={levelZ}
         />
         <table>
           {[
@@ -632,7 +634,8 @@ const Dialog = ({ dialog }) => (
       left: '10vw',
       right: '10vw',
       padding: '1em',
-      background: 'rgba(73, 41, 1, 0.8)',
+      // background: 'rgba(73, 41, 1, 0.8)',
+      background: 'var(--orange-primary)',
       border: '1px solid black',
       minHeight: '40vh',
       color: 'floralwhite',
@@ -640,7 +643,22 @@ const Dialog = ({ dialog }) => (
       zIndex: 10,
     }}
   >
-    {dialog}
+    <h3 style={{
+      marginTop: '-0.4em',
+      background: 'var(--blue-primary)',
+      color: 'var(--orange-primary)',
+      padding: '1em',
+    }}>
+      Dialog
+    </h3>
+    <div style={{
+      opacity: 1,
+      color: 'black',
+      fontWeight: 'bold',
+      fontFamily: 'cursive',
+    }}>
+      {dialog}
+    </div>
   </div>
 );
 
@@ -651,7 +669,7 @@ const MovementButtons = ({ onLeft, onRight, onUpLeft, onUpRight, onDownLeft, onD
       style={{
         position: 'absolute',
         bottom: '10vh',
-        left: '10vw',
+        // left: '10vw',
         right: '10vw',
         display: 'flex',
         flexDirection: 'column',
@@ -659,6 +677,7 @@ const MovementButtons = ({ onLeft, onRight, onUpLeft, onUpRight, onDownLeft, onD
         fontSize: '2em',
         opacity: 0.2,
         zIndex: 100,
+        width: '8em',
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>

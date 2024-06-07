@@ -52,7 +52,7 @@ export function getLightLevels(
 
     while (queue.length > 0) {
       const { x, y, lightLevel } = queue.shift()!;
-      console.log('x, y, lightLevel', x, y, lightLevel);
+      // console.log('x, y, lightLevel', x, y, lightLevel);
 
       // only update the light level if it's higher than the current light level
       const cell = cellsWithLightLevels[y][x];
