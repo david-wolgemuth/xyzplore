@@ -17,12 +17,12 @@ import { Grid } from './Grid';
 import { randomChoice, randomSort } from './utilities';
 import { PointXY, Direction, getHexGridDelta } from './directions';
 import { getLightLevels } from './lighting';
-import { DRONE_CLOUD } from './Cards';
+// import { DRONE_CLOUD } from './Cards';
 
 
-if (window.bikesVDrones) {
-  console.log(DRONE_CLOUD);
-}
+// if (window.bikesVDrones) {
+//   console.log(DRONE_CLOUD);
+// }
 
 
 class App extends React.Component {
