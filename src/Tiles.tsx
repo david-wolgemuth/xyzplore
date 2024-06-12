@@ -42,7 +42,7 @@ export const PLAYER_TILE = {
   key: 'P',
   display: '𐀪',
   impassable: true,
-  lightLevel: 8.0,
+  lightLevel: 0.3,
 }
 
 export const NPC_TILE = {
@@ -118,7 +118,7 @@ export const TORCH_TILE = {
   color: 'yellow',
   key: 't',
   display: '𐂘',
-  lightLevel: 1.0,
+  lightLevel: 0.8,
 }
 
 

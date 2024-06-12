@@ -29,7 +29,7 @@ export function getLightLevels(
   const cellsWithLightLevels = cells.map((row, y) => {
     return row.map((cell, x) => {
       if (cell.lightLevel > 0) {
-        lightSources.push({ x, y, lightLevel: 1.0 });
+        lightSources.push({ x, y, lightLevel: cell.lightLevel });
       }
 
       return {

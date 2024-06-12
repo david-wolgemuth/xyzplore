@@ -597,6 +597,7 @@ class App extends React.Component {
       levelEast,
       playerX,
       playerY,
+      inventory,
     } = this.state;
 
     if (!level) {
@@ -606,7 +607,12 @@ class App extends React.Component {
     const cells = this.getCells();
 
     // set player
-    cells[playerY][playerX] = {...PLAYER_TILE};
+    cells[playerY][playerX] = {
+      ...PLAYER_TILE,
+    };
+    if ((inventory as any).torch) {
+      cells[playerY][playerX].lightLevel = 0.8;
+    }
 
     const blockedRow = Array(cells[0].length).fill(WALL_TILE.key);
 
