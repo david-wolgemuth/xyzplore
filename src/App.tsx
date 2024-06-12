@@ -17,6 +17,11 @@ import { Grid } from './Grid';
 import { randomChoice, randomSort } from './utilities';
 import { PointXY, Direction, getHexGridDelta } from './directions';
 import { getLightLevels } from './lighting';
+import {
+  INITIAL,
+  EldraDialogText,
+  EldraDialogGraph,
+} from './NPCs';
 // import { DRONE_CLOUD } from './Cards';
 
 
@@ -40,10 +45,13 @@ class App extends React.Component {
 
     inventory: {},
     npcs: [],
+    mobs: [],
 
     playerX: 7,
     playerY: 5,
 
+    currentNPC: null,
+    dialogState: null,
     dialog: null,
     gameOver: false,
   }
@@ -51,7 +59,7 @@ class App extends React.Component {
   /** Safely get a level */
   getLevel = (x, y, z) => {
     try {
-      const levelCSV = require(`./levels/${x},${y},${z}.csv`);
+      const levelCSV = require(`./levels/${z}/${x},${y}.csv`);
       console.log('loaded level', x, y, z);
       return JSON.parse(levelCSV.split('module.exports = ')[1]);
     } catch (e) {
@@ -62,22 +70,38 @@ class App extends React.Component {
 
   /** Load level and set it to current level */
   loadLevel = (x, y, z, cb = null) => {
-    const levelCSV = require(`./levels/${x},${y},${z}.csv`);
+    const { npcs } = this.state;
+    const levelCSV = require(`./levels/${z}/${x},${y}.csv`);
     const level = JSON.parse(levelCSV.split('module.exports = ')[1]);
-    const npcs = [];
-    for (let y = 0; y < level.length; y++) {
-      for (let x = 0; x < level[y].length; x++) {
-        if (TILE_MAP[level[y][x]].npc) {
+    // mobs reset on each level
+    const mobs = []
+
+    for (let r = 0; r < level.length; r++) {
+      for (let c = 0; c < level[r].length; c++) {
+        if (TILE_MAP[level[r][c]].npc) {
+          if (npcs.find(npc => npc.tile === level[r][c])) {
+            // npc already exists in npcs list
+            continue;
+          }
           npcs.push({
-            x,
-            y,
-            tile: level[y][x],
+            x: c,
+            y: r,
+            levelX: x,
+            levelY: y,
+            tile: level[r][c],
             state: {},
           });
-          level[y][x] = EMPTY_TILE.key;
-        }
-        if (TILE_MAP[level[y][x]].key === PLAYER_TILE.key) {
-          level[y][x] = EMPTY_TILE.key;
+          level[r][c] = EMPTY_TILE.key;
+        } else if (TILE_MAP[level[r][c]].key === PLAYER_TILE.key) {
+          level[r][c] = EMPTY_TILE.key;
+        } else if (TILE_MAP[level[r][c]].mob) {
+          mobs.push({
+            x: c,
+            y: r,
+            tile: level[r][c],
+            state: {},
+          });
+          level[r][c] = EMPTY_TILE.key;
         }
       }
     }
@@ -93,6 +117,7 @@ class App extends React.Component {
       levelZ: z,
       level,
       npcs: npcs,
+      mobs: mobs,
 
       levelNorth,
       levelSouth,
@@ -204,8 +229,22 @@ class App extends React.Component {
     switch (tileKey) {
       case NPC_TILE.key:
         console.log('npc');
+        const npc = this.state.npcs.find(npc => npc.x === tileX && npc.y === tileY);
+        if (!npc) {
+          console.error('no npc at', tileX, tileY);
+          return;
+        }
+        // TODO - combine this dialog logic
+        //  with dialog logic in handleRight
+        //  (and move out of handleRight / handleHitImpassableTile ...)
+
+        // only Eldra for now...
+        const dialogState = npc.state.dialogState || INITIAL;
         this.setState({
-          dialog: 'Hello, traveler! This is what you have in your inventory: ' + JSON.stringify(this.state.inventory),
+          // dialog: //'Hello, traveler! This is what you have in your inventory: ' + JSON.stringify(this.state.inventory),
+          currentNPC: npc,
+          dialogState: dialogState,
+          dialog: EldraDialogText[dialogState],
         });
         break;
       case HOUSE_TILE.key:
@@ -229,20 +268,20 @@ class App extends React.Component {
     }
   }
 
-  moveNPCs = (cb) => {
-    const newNpcs = this.state.npcs.map(npc => {
-      switch (npc.tile) {
+  moveMobs = (cb) => {
+    const newMobs = this.state.mobs.map(mob => {
+      switch (mob.tile) {
         case SLIME_TILE.key:
-          return this.moveSlime(npc);
+          return this.moveSlime(mob);
         case BAT_TILE.key:
-          return this.moveBat(npc);
+          return this.moveBat(mob);
         default:
-          return npc;
+          return mob;
       }
     });
 
     this.setState({
-      npcs: newNpcs,
+      mobs: newMobs,
     }, cb);
   }
 
@@ -270,7 +309,7 @@ class App extends React.Component {
 
     const tryMove = (dir) => {
       const delta = getHexGridDelta(y, dir);
-      if (this.canMoveNPC(x, y, delta.x, delta.y)) {
+      if (this.canMoveMob(x, y, delta.x, delta.y)) {
         return {
           ...slime,
           x: slime.x + delta.x,
@@ -322,7 +361,7 @@ class App extends React.Component {
 
     for (const direction of directions) {
       const delta = getHexGridDelta(y, direction);
-      if (this.canMoveNPC(x, y, delta.x, delta.y)) {
+      if (this.canMoveMob(x, y, delta.x, delta.y)) {
         return {
           ...bat,
           x: bat.x + delta.x,
@@ -343,7 +382,7 @@ class App extends React.Component {
     localStorage.setItem('gameState', state);
   }
 
-  canMoveNPC = (x, y, dx, dy) => {
+  canMoveMob = (x, y, dx, dy) => {
     const { level } = this.state;
     if (!level[y + dy] || !level[y + dy][x + dx]) {
       // out of bounds
@@ -357,7 +396,7 @@ class App extends React.Component {
   }
 
   afterMove = () => {
-    this.moveNPCs(() => {
+    this.moveMobs(() => {
       const { playerX, playerY } = this.state;
 
       const tile = this.getCells()[this.state.playerY][this.state.playerX];
@@ -465,13 +504,49 @@ class App extends React.Component {
   }
 
   handleRight = () => {
-    const { dialog, gameOver } = this.state;
+    const { dialog, gameOver, dialogState, currentNPC } = this.state;
     if (gameOver) {
       this.handleGameOver();
       return;
     }
     if (dialog) {
-      this.setState({ dialog: null });
+      if (dialogState) {
+        const dialogGraphNode = EldraDialogGraph[dialogState];
+        let newDialogState = dialogState;
+        let newState = this.state;
+        if (dialogGraphNode && dialogGraphNode.next) {
+          [newDialogState, newState] = dialogGraphNode.next(
+            this.state,
+          );
+        }
+
+        // keep old state if no new state,
+        // but dismiss dialog if no new dialog
+        const dialogChanged = newDialogState !== dialogState;
+
+        this.setState({
+          ...newState,
+          npcs: newState.npcs.map(npc => {
+            if (npc.tile === currentNPC.tile) {
+              return {
+                ...npc,
+                state: {
+                  ...npc.state,
+                  dialogState: newDialogState,
+                },
+              };
+            }
+            return npc;
+          }),
+          dialogState: dialogChanged ? newDialogState : null,
+          dialog: dialogChanged ? EldraDialogText[newDialogState] : null,
+        });
+      } else {
+        // this is just a system dialog, dismiss it
+        this.setState({
+          dialog: null
+        });
+      }
       return;
     }
     this.movePlayerDirection(Direction.RIGHT);
@@ -487,14 +562,19 @@ class App extends React.Component {
   }
 
   /**
-   * layers npcs / player on top of level
+   * layers npcs / mobs / player on top of level
    */
   getCells = (level = this.state.level) => {
     const cellsCopy = level.map(row => row.slice());
 
-    // set npcs
+    // set npcs & mobs
     this.state.npcs.forEach(npc => {
-      cellsCopy[npc.y][npc.x] = npc.tile;
+      if (npc.levelX === this.state.levelX && npc.levelY === this.state.levelY) {
+        cellsCopy[npc.y][npc.x] = npc.tile;
+      }
+    });
+    this.state.mobs.forEach(mob => {
+      cellsCopy[mob.y][mob.x] = mob.tile;
     });
 
     return cellsCopy.map((row, y) => {
@@ -599,23 +679,25 @@ class App extends React.Component {
           width: '100vw',
         }}
       >
-        <Dialog dialog={dialog} />
+        <Dialog
+          dialog={dialog}
+        />
         <Grid
           cells={cells}
           z={levelZ}
         />
-        <table>
-          {[
-            ["X", this.state.levelX],
-            ["Y", this.state.levelY],
-            ["Z", this.state.levelZ],
-        ].map(([label, value]) => (
-          <tr>
-            <th>{label}</th>
-            <td>{value}</td>
-          </tr>
-        ))}
-        </table>
+        <Debug>
+          {{
+            x: this.state.levelX,
+            y: this.state.levelY,
+            z: this.state.levelZ,
+            dialog: this.state.dialog,
+            dialogState: this.state.dialogState,
+            inventory: this.state.inventory,
+            npcs: this.state.npcs,
+            mobs: this.state.mobs,
+          }}
+        </Debug>
         <MovementButtons
           onLeft={this.handleLeft}
           onRight={this.handleRight}
@@ -629,6 +711,18 @@ class App extends React.Component {
   }
 }
 
+const Debug = ({ children }) => {
+  return (
+    <pre
+      style={{
+        background: 'rgba(0, 0, 0, 0.8)',
+        color: 'white',
+      }}
+    >
+      {JSON.stringify(children, null, 2)}
+    </pre>
+  );
+}
 
 const Dialog = ({ dialog }) => (
   <div

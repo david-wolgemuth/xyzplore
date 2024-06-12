@@ -99,7 +99,7 @@ export const SLIME_TILE = {
   key: 's',
   display: '𐂃',
   impassable: true,
-  npc: true,
+  mob: true,
 }
 
 
@@ -109,7 +109,7 @@ export const BAT_TILE = {
   key: 'b',
   display: 'ᄊ',
   impassable: true,
-  npc: true,
+  mob: true,
 }
 
 
