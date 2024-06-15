@@ -12,6 +12,8 @@ import {
   PLAYER_TILE,
   SLIME_TILE,
   HOUSE_TILE,
+  BIRD_TILE,
+  WATER_TILE,
 } from './Tiles';
 import { Grid } from './Grid';
 import { randomChoice, randomSort } from './utilities';
@@ -47,8 +49,8 @@ class App extends React.Component {
     npcs: [],
     mobs: [],
 
-    playerX: 7,
-    playerY: 5,
+    playerX: 2,
+    playerY: 2,
 
     currentNPC: null,
     dialogState: null,
@@ -78,6 +80,10 @@ class App extends React.Component {
 
     for (let r = 0; r < level.length; r++) {
       for (let c = 0; c < level[r].length; c++) {
+        if (!TILE_MAP[level[r][c]]) {
+          console.error('invalid tile', level[r][c]);
+          continue;
+        }
         if (TILE_MAP[level[r][c]].npc) {
           if (npcs.find(npc => npc.tile === level[r][c])) {
             // npc already exists in npcs list
@@ -88,6 +94,7 @@ class App extends React.Component {
             y: r,
             levelX: x,
             levelY: y,
+            levelZ: z,
             tile: level[r][c],
             state: {},
           });
@@ -229,7 +236,14 @@ class App extends React.Component {
     switch (tileKey) {
       case NPC_TILE.key:
         console.log('npc');
-        const npc = this.state.npcs.find(npc => npc.x === tileX && npc.y === tileY);
+        const npc = this.state.npcs.find(
+          npc => (
+            npc.x === tileX
+            && npc.y === tileY
+            && npc.levelX === this.state.levelX
+            && npc.levelY === this.state.levelY
+            && npc.levelZ === this.state.levelZ
+        ));
         if (!npc) {
           console.error('no npc at', tileX, tileY);
           return;
@@ -275,6 +289,8 @@ class App extends React.Component {
           return this.moveSlime(mob);
         case BAT_TILE.key:
           return this.moveBat(mob);
+        case BIRD_TILE.key:
+          return this.moveBird(mob);
         default:
           return mob;
       }
@@ -361,7 +377,7 @@ class App extends React.Component {
 
     for (const direction of directions) {
       const delta = getHexGridDelta(y, direction);
-      if (this.canMoveMob(x, y, delta.x, delta.y)) {
+      if (this.canMoveMob(x, y, delta.x, delta.y, true)) {
         return {
           ...bat,
           x: bat.x + delta.x,
@@ -374,6 +390,94 @@ class App extends React.Component {
   }
 
   /**
+   * Stays still, unless player is close,
+   * then moves in random direction away from player
+   *
+   * @param bird
+   * @returns
+   */
+  moveBird = (bird) => {
+    const { playerX, playerY } = this.state;
+    const { x, y } = bird;
+
+    // const directions = randomSort([
+    //   Direction.UP_LEFT,
+    //   Direction.LEFT,
+    //   Direction.DOWN_LEFT,
+    //   Direction.DOWN_RIGHT,
+    //   Direction.RIGHT,
+    //   Direction.UP_RIGHT,
+    // ]);
+
+    console.log('player', playerX, playerY, 'bird', x, y);
+
+    const distanceToPlayer = Math.sqrt(
+      Math.pow(playerX - x, 2) + Math.pow(playerY - y, 2)
+    );
+
+    const directionToPlayer = Math.atan2(playerY - y, playerX - x);
+
+    console.log(directionToPlayer);
+
+    if (distanceToPlayer > 5) {
+      return bird;
+    }
+
+    let oppositeDirections;
+    if (directionToPlayer < Math.PI / 6) {
+      console.log('down', directionToPlayer, Math.PI / 6);
+      oppositeDirections = randomSort([
+        Direction.DOWN_LEFT,
+        Direction.DOWN_RIGHT,
+      ]);
+    } else if (directionToPlayer < Math.PI / 3) {
+      console.log('left', directionToPlayer, Math.PI / 3);
+      oppositeDirections = randomSort([
+        Direction.LEFT,
+        Direction.RIGHT,
+      ]);
+    } else if (directionToPlayer < Math.PI / 2) {
+      console.log('up', directionToPlayer, Math.PI / 2);
+      oppositeDirections = randomSort([
+        Direction.UP_LEFT,
+        Direction.UP_RIGHT,
+      ]);
+    } else if (directionToPlayer < Math.PI * 2 / 3) {
+      console.log('up', directionToPlayer, Math.PI * 2 / 3);
+      oppositeDirections = randomSort([
+        Direction.LEFT,
+        Direction.RIGHT,
+      ]);
+    } else if (directionToPlayer < Math.PI * 5 / 6) {
+      console.log('up', directionToPlayer, Math.PI * 5 / 6);
+      oppositeDirections = randomSort([
+        Direction.DOWN_LEFT,
+        Direction.DOWN_RIGHT,
+      ]);
+    } else {
+      console.log('up', directionToPlayer, Math.PI);
+      oppositeDirections = randomSort([
+        Direction.UP_LEFT,
+        Direction.UP_RIGHT,
+      ]);
+    }
+
+    for (const direction of oppositeDirections) {
+      const delta = getHexGridDelta(y, direction);
+      if (this.canMoveMob(x, y, delta.x, delta.y, true)) {
+        return {
+          ...bird,
+          x: bird.x + delta.x,
+          y: bird.y + delta.y,
+        };
+      }
+    }
+
+    console.warn("bird is stuck", bird);
+    return bird;
+  }
+
+  /**
    * save game state
    * store all state in LocalStorage
    */
@@ -382,7 +486,7 @@ class App extends React.Component {
     localStorage.setItem('gameState', state);
   }
 
-  canMoveMob = (x, y, dx, dy) => {
+  canMoveMob = (x, y, dx, dy, canFly = false) => {
     const { level } = this.state;
     if (!level[y + dy] || !level[y + dy][x + dx]) {
       // out of bounds
@@ -390,6 +494,11 @@ class App extends React.Component {
     }
     const newTileKey = level[y + dy][x + dx];
     if (TILE_MAP[newTileKey].impassable) {
+      if (canFly && TILE_MAP[newTileKey].key === WATER_TILE.key) {
+        // can fly over water
+        return true;
+      }
+
       return false;
     }
     return true;
@@ -400,7 +509,7 @@ class App extends React.Component {
       const { playerX, playerY } = this.state;
 
       const tile = this.getCells()[this.state.playerY][this.state.playerX];
-      console.log('after move', tile);
+      // console.log('after move', tile);
       switch (tile.key) {
         case DOWN_STAIRS_TILE.key:
           this.loadLevel(this.state.levelX, this.state.levelY, this.state.levelZ - 1);
@@ -567,17 +676,7 @@ class App extends React.Component {
   getCells = (level = this.state.level) => {
     const cellsCopy = level.map(row => row.slice());
 
-    // set npcs & mobs
-    this.state.npcs.forEach(npc => {
-      if (npc.levelX === this.state.levelX && npc.levelY === this.state.levelY) {
-        cellsCopy[npc.y][npc.x] = npc.tile;
-      }
-    });
-    this.state.mobs.forEach(mob => {
-      cellsCopy[mob.y][mob.x] = mob.tile;
-    });
-
-    return cellsCopy.map((row, y) => {
+    const cellsData = cellsCopy.map((row, y) => {
       return row.map((cellKey, x) => {
         return {
           ...TILE_MAP[cellKey],
@@ -586,6 +685,28 @@ class App extends React.Component {
         };
       });
     })
+
+    // set npcs & mobs
+    // AFTER level is copied, so base can be set
+    this.state.npcs.forEach(npc => {
+      if (npc.levelX === this.state.levelX && npc.levelY === this.state.levelY) {
+        const baseTile = cellsData[npc.y][npc.x];
+        cellsData[npc.y][npc.x] = {
+          ...TILE_MAP[npc.tile],
+          base: baseTile,
+        }
+      }
+    });
+    this.state.mobs.forEach(mob => {
+      // mobs do not have levelX/Y, they are always on current level
+      const baseTile = cellsData[mob.y][mob.x];
+      cellsData[mob.y][mob.x] = {
+        ...TILE_MAP[mob.tile],
+        base: baseTile,
+      }
+    });
+
+    return cellsData;
   }
 
   getVisibleCells = () => {
@@ -607,11 +728,13 @@ class App extends React.Component {
     const cells = this.getCells();
 
     // set player
+    const playerBase = cells[playerY][playerX];
     cells[playerY][playerX] = {
       ...PLAYER_TILE,
+      base: playerBase,
     };
     if ((inventory as any).torch) {
-      cells[playerY][playerX].lightLevel = 0.8;
+      cells[playerY][playerX].lightLevel = 1.2;
     }
 
     const blockedRow = Array(cells[0].length).fill(WALL_TILE.key);
@@ -692,6 +815,7 @@ class App extends React.Component {
           cells={cells}
           z={levelZ}
         />
+        <button onClick={() => this.saveGame()}>Save</button>
         <Debug>
           {{
             x: this.state.levelX,

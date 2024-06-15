@@ -2,7 +2,7 @@ import { DIRECTIONS, getHexGridDelta } from './directions';
 import { TORCH_TILE } from './Tiles';
 
 
-const LIGHT_LOST_PER_TILE = 0.1;
+const LIGHT_LOST_PER_TILE = 0.06;
 const LIGHT_LOST_PER_IMPASSABLE_TILE = 0.4;
 
 
@@ -28,13 +28,18 @@ export function getLightLevels(
   const lightSources = []
   const cellsWithLightLevels = cells.map((row, y) => {
     return row.map((cell, x) => {
-      if (cell.lightLevel > 0) {
-        lightSources.push({ x, y, lightLevel: cell.lightLevel });
+      const lightLevel = Math.max(
+        cell.lightLevel || 0.0,
+        cell.base ? cell.base.lightLevel || 0.0 : 0.0,
+        0.0,
+      );
+      if (lightLevel > 0) {
+        lightSources.push({ x, y, lightLevel: lightLevel });
       }
 
       return {
         ...cell,
-        lightLevel: cell.lightLevel || 0.0,
+        lightLevel: lightLevel,
       };
     });
   });

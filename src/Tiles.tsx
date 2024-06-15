@@ -1,10 +1,12 @@
 
 export const WALL_TILE = {
   name: 'wall',
-  color: '#733406',
+  color: '#5c2803',
+  background: '#40200c',
   key: 'x',
+  display: '#',
   impassable: true,
-  opacity: 1.0,
+  opacity: 1.6,
 }
 
 export const EMPTY_TILE = {
@@ -33,32 +35,43 @@ export const ROCK_TILE = {
   color: 'gray',
   key: 'r',
   impassable: true,
-  opacity: 0.8,
 }
 
 export const PLAYER_TILE = {
   name: 'player',
   color: 'pink',
   key: 'P',
-  display: '𐀪',
+  display: '𓁆',
+  bold: true,
   impassable: true,
-  lightLevel: 0.3,
+  lightLevel: 0.4,
 }
 
 export const NPC_TILE = {
   name: 'npc',
   color: 'orange',
   key: 'N',
-  display: '𐂁',
+  display: '𓁘',
+  bold: true,
   impassable: true,
   npc: true,
 }
 
+export const BIRD_TILE = {
+  name: 'bird',
+  color: '#cd3f58',
+  key: '`',
+  display: '𓅚',
+  mob: true,
+  // background: 'green',
+}
+
 export const FLOWER_TILE = {
   name: 'flower',
-  color: '#ff4263',
+  color: '#cd3f58',
   key: 'f',
-  display: '𐃓',
+  display: '𓇗',
+  // background: 'green',
 }
 
 export const TREE_TILE = {
@@ -67,7 +80,6 @@ export const TREE_TILE = {
   key: 'T',
   display: '𐃐',
   impassable: true,
-  opacity: 0.8,
 }
 
 export const HOUSE_TILE = {
@@ -76,28 +88,28 @@ export const HOUSE_TILE = {
   key: 'H',
   display: '𐂺',
   impassable: true,
-  opacity: 0.8,
 }
 
 export const DOWN_STAIRS_TILE = {
   name: 'down-stairs',
   color: '#e4d01e',
   key: 'd',
-  display: '∏',
+  display: '𐂪',
 }
 
 export const UP_STAIRS_TILE = {
   name: 'up-stairs',
   color: '#e4d01e',
   key: 'u',
-  display: '∏',
+  display: '𐂫',
 }
 
 export const SLIME_TILE = {
   name: 'slime',
   color: '#daa608',
   key: 's',
-  display: '𐂃',
+  display: '𓃡',
+  bold: true,
   impassable: true,
   mob: true,
 }
@@ -107,7 +119,8 @@ export const BAT_TILE = {
   name: 'bat',
   color: 'purple',
   key: 'b',
-  display: 'ᄊ',
+  display: '𓆤',
+  bold: true,
   impassable: true,
   mob: true,
 }
@@ -118,7 +131,7 @@ export const TORCH_TILE = {
   color: 'yellow',
   key: 't',
   display: '𐂘',
-  lightLevel: 0.8,
+  lightLevel: 1.2,
 }
 
 
@@ -135,6 +148,7 @@ export const TILES = [
   FLOWER_TILE,
   TREE_TILE,
   HOUSE_TILE,
+  BIRD_TILE,
   DOWN_STAIRS_TILE,
   UP_STAIRS_TILE,
   TORCH_TILE,

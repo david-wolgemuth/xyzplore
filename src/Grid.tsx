@@ -28,30 +28,54 @@ export function Cell({
   backgroundColor = '#D6B8A4';  // dirt / sand
 
   if (z < 0) {
-    backgroundColor = '#342929';
+    backgroundColor = '#604545';
+  }
+
+  if (cellData.background) {
+    backgroundColor = cellData.background;
   }
 
   // console.log(cellData.key)
 
-  switch(cellData.key) {
+  // TODO - move this to Tiles.tsx...
+  const baseKey = cellData.base ? cellData.base.key : cellData.key;
+  switch(baseKey) {
     case 'w':// TILE_MAP.WATER_TILE.key:
       backgroundColor = '#6D8AA3'; // 'var(--blue-primary)';
       break;
     case 'g':
+    case 'f':
       backgroundColor = '#67B475'; // 'var(--green-related-2)';
       break;
     case 'T':
       backgroundColor = '#1B6D36'; //'var(--green-related-1)';
       break;
+  }
+
+  switch(cellData.key) {
     case 'P':
-      color = '#3A5069';  // player dark
-      break;
-    case 'N':
-      color = '#3A5069';  // player dark
+      if (z < 0) {
+        color = '#669bd8';
+      } else {
+        color = '#3A5069';
+      }
       break;
     case '-':
       body = '';
       break;
+    case 'd':
+    case 'H':
+      color = 'brown';
+      break;
+    case 's':
+    case 'N':
+    case 'b':
+      if (z < 0) {
+        color = '#d95ad9';
+      } else {
+        color = '#A35A00';
+      }
+      break
     default:
       break;
   }
@@ -67,18 +91,54 @@ export function Cell({
         textAlign: 'center',
         lineHeight: `${CELL_HEIGHT}vw`,
         // fontSize: '6vw',
-        fontSize: '4.5vw',
-        fontWeight: 'bolder',
-        backgroundColor: backgroundColor,
+        // fontSize: '4.5vw',
+        fontWeight: cellData.bold ? 'bolder' : 'normal',
+        // backgroundColor: backgroundColor,
         // TODO - let font go out of clip?
-        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+        // clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
 
         // Light Levels / Shading only Apply Underground
         // (todo - moderate light level above ground?)
         opacity: z < 0 ? cellData.lightLevel : 'unset',
       }}
     >
-      {body}
+      <div className="Cell__Background"
+        style={{
+          // position: 'relative',
+          width: `${CELL_WIDTH}vw`,
+          height: `${CELL_HEIGHT}vw`,
+          // color: color,
+          // textAlign: 'center',
+          lineHeight: `${CELL_HEIGHT}vw`,
+          // fontSize: '6vw',
+          // fontSize: '4.5vw',
+          // fontWeight: 'bolder',
+          backgroundColor: backgroundColor,
+          // TODO - let font go out of clip?
+          clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+
+          // Light Levels / Shading only Apply Underground
+          // (todo - moderate light level above ground?)
+          opacity: z < 0 ? cellData.lightLevel : 'unset',
+          zIndex: 0,
+        }}
+      >
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          fontSize: '8.5vw',
+          zIndex: 1,
+          // fontWeight: 'bolder',
+        }}
+      >
+
+        {body}
+      </div>
       {/* {cellData.lightLevel} */}
     </div>
   );
