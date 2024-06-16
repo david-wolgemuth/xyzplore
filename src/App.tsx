@@ -17,7 +17,14 @@ import {
 } from './Tiles';
 import { Grid } from './Grid';
 import { randomChoice, randomSort } from './utilities';
-import { PointXY, PointXYZ, Direction, getHexGridDelta } from './directions';
+import {
+   PointXY,
+   PointXYZ,
+   Direction,
+   getHexGridDelta,
+   RelativeDirection,
+   getRelativeDirection,
+} from './directions';
 import { getLightLevels } from './lighting';
 import {
   INITIAL,
@@ -48,7 +55,9 @@ class App extends React.Component {
     inventory: {},
     npcs: [],
     mobs: [],
-    previousMoves: [],
+
+    prevCardinalDirection: null,
+    moveCombo: [] as Array<RelativeDirection>,
 
     playerX: 2,
     playerY: 2,
@@ -135,17 +144,50 @@ class App extends React.Component {
   }
 
   tryMovePlayerDirection = (direction: Direction) => {
-    const { playerX, playerY } = this.state;
+    const { playerX, playerY, prevCardinalDirection, moveCombo } = this.state;
     const [deltaX, deltaY] = getHexGridDelta(playerY, direction);
     const [newPlayerX, newPlayerY] = [playerX + deltaX, playerY + deltaY];
+
+    // combo move of 4th consecutive move
+    // can move player 2 tiles in a row,
+    // before triggering "after move" logic
+    // can fly on first of 2 tiles
+    if (
+      this.isMovingConsecutive(direction, 4)
+      && this.canPlayerMoveWithinLevel(
+        direction,
+        { canFly: true },
+      )
+      && this.canPlayerMoveWithinLevel(
+        direction,
+        { playerX: newPlayerX, playerY: newPlayerY },
+      )
+    ) {
+      const [deltaX2, deltaY2] = getHexGridDelta(newPlayerY, direction);
+      const newPlayerX2 = newPlayerX + deltaX2;
+      const newPlayerY2 = newPlayerY + deltaY2;
+      this.setState({
+        playerX: newPlayerX2,
+        playerY: newPlayerY2,
+        moveCombo: [
+          ...moveCombo,
+          getRelativeDirection(prevCardinalDirection, direction),
+        ],
+      }, this.afterMove);
+      return true;
+    }
 
     // Simply move player within level
     // to new position
     if (this.canPlayerMoveWithinLevel(direction)) {
-
       this.setState({
         playerX: newPlayerX,
         playerY: newPlayerY,
+        prevCardinalDirection: direction,
+        moveCombo: [
+          ...moveCombo,
+          getRelativeDirection(prevCardinalDirection, direction),
+        ],
       }, this.afterMove);
       return true;
     }
@@ -155,6 +197,10 @@ class App extends React.Component {
       const newCell = this.getCells()[newPlayerY][newPlayerX];
 
       this.triggerPlayerInteractionWithTile(newCell.key, newPlayerX, newPlayerY);
+      this.setState({
+        prevCardinalDirection: null,
+        moveCombo: [], // reset combo on interaction
+      });
       return false;
     }
 
@@ -168,10 +214,16 @@ class App extends React.Component {
       this.setState({
         playerX: newPlayerX,
         playerY: newPlayerY,
+        prevCardinalDirection: null,
+        moveCombo: [], // reset combo on level change
       });
       return true;
     }
 
+      this.setState({
+        prevCardinalDirection: null,
+        moveCombo: [], // reset combo
+      });
     // assume impassable tile
     return false;
   }
@@ -180,9 +232,14 @@ class App extends React.Component {
    * check if the player can move within the current level
    *  without hitting an impassable tile or going to adjacent level
    */
-  canPlayerMoveWithinLevel = (direction: Direction) => {
-    const { playerX, playerY } = this.state;
-
+  canPlayerMoveWithinLevel = (
+    direction: Direction,
+    {
+      playerX = this.state.playerX,
+      playerY = this.state.playerY,
+      canFly = false,
+    } = {},
+  ) => {
     const [dx, dy] = getHexGridDelta(playerY, direction);
 
     const newPlayerX = playerX + dx;
@@ -195,8 +252,11 @@ class App extends React.Component {
     }
 
     const newCell = this.getCells()[newPlayerY][newPlayerX];
+    if (canFly && newCell.key === WATER_TILE.key) {
+      // can fly over water
+      return true;
+    }
     if (newCell.impassable) {
-      // TODO - handle fly?
       return false;
     }
 
@@ -346,6 +406,47 @@ class App extends React.Component {
     }
   }
 
+  /**
+   * Movement combo, used to trigger double move
+   */
+  isMovingConsecutive = (
+    direction: Direction,
+    numConsecutiveInDirection=4,
+    prevDirection = this.state.prevCardinalDirection,
+    moveCombo = this.state.moveCombo,
+  ) => {
+    const relativeDirection = getRelativeDirection(prevDirection, direction);
+    if (relativeDirection !== RelativeDirection.FRONT) {
+      return false;
+    }
+
+    let numTimesMovingFront = 1;  // count the current move
+    for (const move of [...moveCombo].reverse()) {
+      if (move !== RelativeDirection.FRONT) {
+        break;
+      }
+      numTimesMovingFront += 1;
+    }
+
+    return numTimesMovingFront >= numConsecutiveInDirection;
+  }
+
+  // isMovingGeneralDirectionConsecutive = (
+  //   direction: Direction,
+  //   numConsecutiveInDirection=4,
+  //   moveCombo = this.state.moveCombo,
+  // ) => {
+  //   let currentDirection = direction;
+
+  //   for (let n = 1; n < numConsecutiveInDirection; n++) {
+  //     if (moveCombo.length < n) {
+  //       return false;
+  //     }
+  //     const previousDirection = moveCombo[moveCombo.length - n];
+
+  //   }
+  // }
+
   getNPCAtXY = (pointXY: PointXY): any | null => {
     const {
       levelX,
@@ -395,12 +496,12 @@ class App extends React.Component {
     console.log('moving slime', slime);
 
     const directionsList = [
-      Direction.UP_LEFT,
-      Direction.LEFT,
-      Direction.DOWN_LEFT,
-      Direction.DOWN_RIGHT,
-      Direction.RIGHT,
-      Direction.UP_RIGHT,
+      Direction.NORTH_WEST,
+      Direction.WEST,
+      Direction.SOUTH_WEST,
+      Direction.SOUTH_EAST,
+      Direction.EAST,
+      Direction.NORTH_EAST,
     ];
     if (clockwise) {
       directionsList.reverse();
@@ -462,12 +563,12 @@ class App extends React.Component {
     }
 
     const directions = randomSort([
-      Direction.UP_LEFT,
-      Direction.LEFT,
-      Direction.DOWN_LEFT,
-      Direction.DOWN_RIGHT,
-      Direction.RIGHT,
-      Direction.UP_RIGHT,
+      Direction.NORTH_WEST,
+      Direction.WEST,
+      Direction.SOUTH_WEST,
+      Direction.SOUTH_EAST,
+      Direction.EAST,
+      Direction.NORTH_EAST,
     ]);
 
     for (const direction of directions) {
@@ -523,38 +624,38 @@ class App extends React.Component {
     if (directionToPlayer < Math.PI / 6) {
       console.log('down', directionToPlayer, Math.PI / 6);
       oppositeDirections = randomSort([
-        Direction.DOWN_LEFT,
-        Direction.DOWN_RIGHT,
+        Direction.SOUTH_WEST,
+        Direction.SOUTH_EAST,
       ]);
     } else if (directionToPlayer < Math.PI / 3) {
       console.log('left', directionToPlayer, Math.PI / 3);
       oppositeDirections = randomSort([
-        Direction.LEFT,
-        Direction.RIGHT,
+        Direction.WEST,
+        Direction.EAST,
       ]);
     } else if (directionToPlayer < Math.PI / 2) {
       console.log('up', directionToPlayer, Math.PI / 2);
       oppositeDirections = randomSort([
-        Direction.UP_LEFT,
-        Direction.UP_RIGHT,
+        Direction.NORTH_WEST,
+        Direction.NORTH_EAST,
       ]);
     } else if (directionToPlayer < Math.PI * 2 / 3) {
       console.log('up', directionToPlayer, Math.PI * 2 / 3);
       oppositeDirections = randomSort([
-        Direction.LEFT,
-        Direction.RIGHT,
+        Direction.WEST,
+        Direction.EAST,
       ]);
     } else if (directionToPlayer < Math.PI * 5 / 6) {
       console.log('up', directionToPlayer, Math.PI * 5 / 6);
       oppositeDirections = randomSort([
-        Direction.DOWN_LEFT,
-        Direction.DOWN_RIGHT,
+        Direction.SOUTH_WEST,
+        Direction.SOUTH_EAST,
       ]);
     } else {
       console.log('up', directionToPlayer, Math.PI);
       oppositeDirections = randomSort([
-        Direction.UP_LEFT,
-        Direction.UP_RIGHT,
+        Direction.NORTH_WEST,
+        Direction.NORTH_EAST,
       ]);
     }
 
@@ -602,12 +703,12 @@ class App extends React.Component {
 
     // Define the 6 primary directions in a hex grid
     const directions = [
-      Direction.RIGHT,
-      Direction.UP_RIGHT,
-      Direction.UP_LEFT,
-      Direction.LEFT,
-      Direction.DOWN_LEFT,
-      Direction.DOWN_RIGHT
+      Direction.EAST,
+      Direction.NORTH_EAST,
+      Direction.NORTH_WEST,
+      Direction.WEST,
+      Direction.SOUTH_WEST,
+      Direction.SOUTH_EAST
     ];
 
     // Calculate the index of the direction to move opposite to
@@ -738,31 +839,31 @@ class App extends React.Component {
   handleUpLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.tryMovePlayerDirection(Direction.UP_LEFT);
+    this.tryMovePlayerDirection(Direction.NORTH_WEST);
   }
 
   handleUpRight = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.tryMovePlayerDirection(Direction.UP_RIGHT);
+    this.tryMovePlayerDirection(Direction.NORTH_EAST);
   }
 
   handleDownLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.tryMovePlayerDirection(Direction.DOWN_LEFT);
+    this.tryMovePlayerDirection(Direction.SOUTH_WEST);
   }
 
   handleDownRight = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.tryMovePlayerDirection(Direction.DOWN_RIGHT);
+    this.tryMovePlayerDirection(Direction.SOUTH_EAST);
   }
 
   handleLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.tryMovePlayerDirection(Direction.LEFT);
+    this.tryMovePlayerDirection(Direction.WEST);
   }
 
   handleRight = () => {
@@ -811,7 +912,7 @@ class App extends React.Component {
       }
       return;
     }
-    this.tryMovePlayerDirection(Direction.RIGHT);
+    this.tryMovePlayerDirection(Direction.EAST);
   }
 
 
