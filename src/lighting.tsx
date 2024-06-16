@@ -3,7 +3,6 @@ import { TORCH_TILE } from './Tiles';
 
 
 const LIGHT_LOST_PER_TILE = 0.06;
-const LIGHT_LOST_PER_IMPASSABLE_TILE = 0.4;
 
 
 type LightSource = {
@@ -73,9 +72,9 @@ export function getLightLevels(
 
       if (lightLevel > 0) {
         for (const direction of DIRECTIONS) {
-          const delta = getHexGridDelta(y, direction);
-          const newX = x + delta.x;
-          const newY = y + delta.y;
+          const [deltaX, deltaY] = getHexGridDelta(y, direction);
+          const newX = x + deltaX;
+          const newY = y + deltaY;
 
           if (!inBounds(newX, newY)) {
             continue;

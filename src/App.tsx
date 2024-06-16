@@ -17,7 +17,7 @@ import {
 } from './Tiles';
 import { Grid } from './Grid';
 import { randomChoice, randomSort } from './utilities';
-import { PointXY, Direction, getHexGridDelta } from './directions';
+import { PointXY, PointXYZ, Direction, getHexGridDelta } from './directions';
 import { getLightLevels } from './lighting';
 import {
   INITIAL,
@@ -48,6 +48,7 @@ class App extends React.Component {
     inventory: {},
     npcs: [],
     mobs: [],
+    previousMoves: [],
 
     playerX: 2,
     playerY: 2,
@@ -133,13 +134,115 @@ class App extends React.Component {
     }, cb);
   }
 
-  movePlayerDirection = (direction: Direction) => {
-    const { playerY } = this.state;
-    const { x: dx, y: dy } = getHexGridDelta(playerY, direction);
-    this.movePlayerByDelta(dx, dy);
+  tryMovePlayerDirection = (direction: Direction) => {
+    const { playerX, playerY } = this.state;
+    const [deltaX, deltaY] = getHexGridDelta(playerY, direction);
+    const [newPlayerX, newPlayerY] = [playerX + deltaX, playerY + deltaY];
+
+    // Simply move player within level
+    // to new position
+    if (this.canPlayerMoveWithinLevel(direction)) {
+
+      this.setState({
+        playerX: newPlayerX,
+        playerY: newPlayerY,
+      }, this.afterMove);
+      return true;
+    }
+
+    // Trigger interaction with mob/npc
+    if (this.canPlayerTriggerInteraction(direction)) {
+      const newCell = this.getCells()[newPlayerY][newPlayerX];
+
+      this.triggerPlayerInteractionWithTile(newCell.key, newPlayerX, newPlayerY);
+      return false;
+    }
+
+    // Move to adjacent level
+    const adjacentLevel = this.canPlayerMoveToAdjacentLevel(direction);
+    if (adjacentLevel) {
+      const [newLevelX, newLevelY, newLevelZ] = adjacentLevel.levelXYZ;
+      const [newPlayerX, newPlayerY] = adjacentLevel.playerXY;
+      this.loadLevel(newLevelX, newLevelY, newLevelZ);
+
+      this.setState({
+        playerX: newPlayerX,
+        playerY: newPlayerY,
+      });
+      return true;
+    }
+
+    // assume impassable tile
+    return false;
   }
 
-  movePlayerByDelta = (dx, dy) => {
+  /**
+   * check if the player can move within the current level
+   *  without hitting an impassable tile or going to adjacent level
+   */
+  canPlayerMoveWithinLevel = (direction: Direction) => {
+    const { playerX, playerY } = this.state;
+
+    const [dx, dy] = getHexGridDelta(playerY, direction);
+
+    const newPlayerX = playerX + dx;
+    const newPlayerY = playerY + dy;
+
+    if (newPlayerX < 0 || newPlayerX >= this.state.level[0].length ||
+        newPlayerY < 0 || newPlayerY >= this.state.level.length) {
+      // would attempt adjacent level
+      return false;
+    }
+
+    const newCell = this.getCells()[newPlayerY][newPlayerX];
+    if (newCell.impassable) {
+      // TODO - handle fly?
+      return false;
+    }
+
+    return true;
+  };
+
+  /**
+   *
+   * @param {Direction} direction
+   * @returns Boolean - whether the player can trigger an interaction
+   */
+  canPlayerTriggerInteraction = (direction: Direction) => {
+    const { playerX, playerY } = this.state;
+
+    const [dx, dy] = getHexGridDelta(playerY, direction);
+
+    const newPlayerX = playerX + dx;
+    const newPlayerY = playerY + dy;
+
+    if (newPlayerX < 0 || newPlayerX >= this.state.level[0].length ||
+        newPlayerY < 0 || newPlayerY >= this.state.level.length) {
+      // would attempt adjacent level
+      return false;
+    }
+
+    const newCell = this.getCells()[newPlayerY][newPlayerX];
+
+    return (
+      newCell.mob
+      || newCell.npc
+      || newCell.key === HOUSE_TILE.key
+
+      // for up/down; can "move player within level", then "after move" update level
+      // || newCell.key === DOWN_STAIRS_TILE.key
+      // || newCell.key === UP_STAIRS_TILE.key
+    );
+  }
+
+  /**
+   * @param {Direction} direction
+   * @returns {Object} - whether the player can move to an adjacent level, the object containing x,y,z and newplayerX, newPlayerY
+   */
+  canPlayerMoveToAdjacentLevel = (direction: Direction): {
+    playerXY: PointXY,
+    levelXYZ: PointXYZ,
+  } | null => {
     const {
       playerX,
       playerY,
@@ -147,103 +250,65 @@ class App extends React.Component {
       levelX,
       levelY,
       levelZ,
-
       levelNorth,
       levelSouth,
       levelWest,
       levelEast,
     } = this.state;
 
+    const [deltaX, deltaY] = getHexGridDelta(playerY, direction);
+
+    let newPlayerX = playerX + deltaX;
+    let newPlayerY = playerY + deltaY;
+    let newLevelX = levelX;
+    let newLevelY = levelY;
+    let newLevelZ = levelZ;
     let newLevel = null;
-    let newLevelXYZ = [];
-    let newPlayerX = playerX + dx;
-    let newPlayerY = playerY + dy;
 
-    // if off map, load level in that direction
-    // move player to new position on the new level (if off east of map, then westmost position of new level)
-    if (newPlayerX < 0) {
+    if (newPlayerX < 0 && levelWest) {
       newLevel = levelWest;
-      if (!newLevel) {
-        console.log('no level west');
-        return false;
-      }
+      newLevelX = levelX - 1;
       newPlayerX = newLevel[0].length - 1;
-      newLevelXYZ = [levelX - 1, levelY, levelZ];
-    }
-    if (newPlayerX >= level[0].length) {
+    } else if (newPlayerX >= level[0].length && levelEast) {
       newLevel = levelEast;
-      if (!newLevel) {
-        console.log('no level east');
-        return false;
-      }
+      newLevelX = levelX + 1
       newPlayerX = 0;
-      newLevelXYZ = [levelX + 1, levelY, levelZ];
-    }
-    if (newPlayerY < 0) {
+    } else if (newPlayerY < 0 && levelNorth) {
       newLevel = levelNorth;
-      if (!newLevel) {
-        console.log('no level north');
-        return false;
-      }
+      newLevelY = levelY - 1;
       newPlayerY = newLevel.length - 1;
-      newLevelXYZ = [levelX, levelY - 1, levelZ];
-    }
-    if (newPlayerY >= level.length) {
+    } else if (newPlayerY >= level.length && levelSouth) {
       newLevel = levelSouth;
-      if (!newLevel) {
-        console.log('no level south');
-        return false;
-      }
+      newLevelY = levelY + 1;
       newPlayerY = 0;
-      newLevelXYZ = [levelX, levelY + 1, levelZ];
+    } else {
+      return null;
     }
 
-    if (newLevel) {
+    // check new tile is passable
+    try {
       const newTile = TILE_MAP[newLevel[newPlayerY][newPlayerX]];
       if (newTile.impassable) {
-        // do not handle impassable tiles when moving to new level,
-        // instead, just don't move
-        return false;
+        return null;
       }
-
-      this.loadLevel(newLevelXYZ[0], newLevelXYZ[1], newLevelXYZ[2]);
-
-      this.setState({
-        playerX: newPlayerX,
-        playerY: newPlayerY,
-      }, this.afterMove);
-      return true;
-
-    } else {
-      const newCell = this.getCells()[newPlayerY][newPlayerX];
-
-      if (newCell.impassable) {
-        this.handleHitImpassableTile(newCell.key, newPlayerX, newPlayerY);
-        return false;
-      }
-
-      this.setState({
-        playerX: newPlayerX,
-        playerY: newPlayerY,
-      }, this.afterMove);
-      return true;
+    } catch (e) {
+      console.warn('no new tile', level, newPlayerX, newPlayerY);
+      return null;
     }
-  }
 
-  handleHitImpassableTile = (tileKey, tileX, tileY) => {
-    console.log('hit impassable tile', tileKey, tileX, tileY);
+    return {
+      playerXY: [newPlayerX, newPlayerY],
+      levelXYZ: [newLevelX, newLevelY, newLevelZ],
+    }
+  };
+
+  // TODO rename to "trigger interaction"
+  // and remove 'wall' / default
+  triggerPlayerInteractionWithTile = (tileKey, tileX, tileY) => {
     const tile = TILE_MAP[tileKey];
     switch (tileKey) {
       case NPC_TILE.key:
-        console.log('npc');
-        const npc = this.state.npcs.find(
-          npc => (
-            npc.x === tileX
-            && npc.y === tileY
-            && npc.levelX === this.state.levelX
-            && npc.levelY === this.state.levelY
-            && npc.levelZ === this.state.levelZ
-        ));
+        const npc = this.getNPCAtXY([tileX, tileY]);
         if (!npc) {
           console.error('no npc at', tileX, tileY);
           return;
@@ -275,11 +340,29 @@ class App extends React.Component {
           dialog: 'You were eaten by a slime!  Game over',
         });
         break;
-      case WALL_TILE.key:
       default:
-        console.debug('impassable tile', tile.key);
+        console.warn('tile was not interactive', tile.key);
         break;
     }
+  }
+
+  getNPCAtXY = (pointXY: PointXY): any | null => {
+    const {
+      levelX,
+      levelY,
+      levelZ,
+      npcs,
+    } = this.state;
+
+    const [tileX, tileY] = pointXY;
+
+    return npcs.find(npc => (
+        npc.x === tileX
+        && npc.y === tileY
+        && npc.levelX === levelX
+        && npc.levelY === levelY
+        && npc.levelZ === levelZ
+    ));
   }
 
   moveMobs = (cb) => {
@@ -324,12 +407,12 @@ class App extends React.Component {
     }
 
     const tryMove = (dir) => {
-      const delta = getHexGridDelta(y, dir);
-      if (this.canMoveMob(x, y, delta.x, delta.y)) {
+      const [deltaX, deltaY] = getHexGridDelta(y, dir);
+      if (this.canMoveMob(x, y, deltaX, deltaY)) {
         return {
           ...slime,
-          x: slime.x + delta.x,
-          y: slime.y + delta.y,
+          x: slime.x + deltaX,
+          y: slime.y + deltaY,
           prevDirection: dir,
         };
       }
@@ -361,10 +444,22 @@ class App extends React.Component {
 
 
   /**
-   * Moves in random direction
+   * Moves in straight line,
+   *  if blocked, moves in random direction
    */
   moveBat = (bat) => {
-    const { x, y } = bat;
+    const { x, y, direction } = bat;
+
+    if (direction) {
+      const [deltaX, deltaY] = getHexGridDelta(y, direction);
+      if (this.canMoveMob(x, y, deltaX, deltaY, true)) {
+        return {
+          ...bat,
+          x: bat.x + deltaX,
+          y: bat.y + deltaY,
+        };
+      }
+    }
 
     const directions = randomSort([
       Direction.UP_LEFT,
@@ -376,12 +471,13 @@ class App extends React.Component {
     ]);
 
     for (const direction of directions) {
-      const delta = getHexGridDelta(y, direction);
-      if (this.canMoveMob(x, y, delta.x, delta.y, true)) {
+      const [deltaX, deltaY] = getHexGridDelta(y, direction);
+      if (this.canMoveMob(x, y, deltaX, deltaY, true)) {
         return {
           ...bat,
-          x: bat.x + delta.x,
-          y: bat.y + delta.y,
+          x: bat.x + deltaX,
+          y: bat.y + deltaY,
+          direction: direction,
         };
       }
     }
@@ -463,14 +559,71 @@ class App extends React.Component {
     }
 
     for (const direction of oppositeDirections) {
-      const delta = getHexGridDelta(y, direction);
-      if (this.canMoveMob(x, y, delta.x, delta.y, true)) {
+      const [deltaX, deltaY] = getHexGridDelta(y, direction);
+      if (this.canMoveMob(x, y, deltaX, deltaY, true)) {
         return {
           ...bird,
-          x: bird.x + delta.x,
-          y: bird.y + delta.y,
+          x: bird.x + deltaX,
+          y: bird.y + deltaY,
         };
       }
+    }
+
+    console.warn("bird is stuck", bird);
+    return bird;
+  }
+
+  /**
+   * Stays still unless the player is close, then moves in the exact opposite direction away from the player.
+   *
+   * @param bird - The bird object containing its current x and y coordinates.
+   * @returns Updated bird object with new coordinates if it moved.
+   */
+  moveBird2 = (bird) => {
+    const { playerX, playerY } = this.state;
+    const { x, y } = bird;
+
+    console.log('player', playerX, playerY, 'bird', x, y);
+
+    // Calculate the distance between the player and the bird
+    const distanceToPlayer = Math.sqrt(
+      Math.pow(playerX - x, 2) + Math.pow(playerY - y, 2)
+    );
+
+    // Calculate the angle from the bird to the player
+    const directionToPlayer = Math.atan2(playerY - y, playerX - x);
+
+    console.log('directionToPlayer', directionToPlayer);
+
+    // If the player is not within 5 units of distance, the bird stays still
+    if (distanceToPlayer > 5) {
+      return bird;
+    }
+
+    // Define the 6 primary directions in a hex grid
+    const directions = [
+      Direction.RIGHT,
+      Direction.UP_RIGHT,
+      Direction.UP_LEFT,
+      Direction.LEFT,
+      Direction.DOWN_LEFT,
+      Direction.DOWN_RIGHT
+    ];
+
+    // Calculate the index of the direction to move opposite to
+    const index = Math.floor((directionToPlayer + Math.PI) / (Math.PI / 3)) % 6;
+    const oppositeDirection = directions[index];
+
+    // Calculate the delta for the bird's movement
+    const [deltaX, deltaY] = getHexGridDelta(y, oppositeDirection);
+
+    // Check if the bird can move to the new position
+    if (this.canMoveMob(x, y, deltaX, deltaY, true)) {
+      return {
+        ...bird,
+        x: bird.x + deltaX,
+        y: bird.y + deltaY,
+      };
     }
 
     console.warn("bird is stuck", bird);
@@ -585,31 +738,31 @@ class App extends React.Component {
   handleUpLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.movePlayerDirection(Direction.UP_LEFT);
+    this.tryMovePlayerDirection(Direction.UP_LEFT);
   }
 
   handleUpRight = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.movePlayerDirection(Direction.UP_RIGHT);
+    this.tryMovePlayerDirection(Direction.UP_RIGHT);
   }
 
   handleDownLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.movePlayerDirection(Direction.DOWN_LEFT);
+    this.tryMovePlayerDirection(Direction.DOWN_LEFT);
   }
 
   handleDownRight = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.movePlayerDirection(Direction.DOWN_RIGHT);
+    this.tryMovePlayerDirection(Direction.DOWN_RIGHT);
   }
 
   handleLeft = () => {
     const { dialog } = this.state;
     if (dialog) { return }
-    this.movePlayerDirection(Direction.LEFT);
+    this.tryMovePlayerDirection(Direction.LEFT);
   }
 
   handleRight = () => {
@@ -658,7 +811,7 @@ class App extends React.Component {
       }
       return;
     }
-    this.movePlayerDirection(Direction.RIGHT);
+    this.tryMovePlayerDirection(Direction.RIGHT);
   }
 
 

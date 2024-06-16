@@ -18,43 +18,41 @@ export const DIRECTIONS = [
 ];
 
 
-export type PointXY = {
-  x: number;
-  y: number;
-}
+export type PointXY = [number, number];
+export type PointXYZ = [number, number, number];
 
 
 export function getHexGridDelta(currentY: number, direction: Direction): PointXY {
   switch (direction) {
     case Direction.UP_LEFT:
-      return {
-        x: currentY % 2 === 0 ? 0 : -1,
-        y: -1,
-      };
+      return [
+        currentY % 2 === 0 ? 0 : -1,
+        -1,
+      ];
     case Direction.UP_RIGHT:
-      return {
-        x: currentY % 2 === 0 ? 1 : 0,
-        y: -1,
-      };
+      return [
+        currentY % 2 === 0 ? 1 : 0,
+        -1,
+      ];
     case Direction.DOWN_LEFT:
-      return {
-        x: currentY % 2 === 0 ? 0 : -1,
-        y: 1,
-      };
+      return [
+        currentY % 2 === 0 ? 0 : -1,
+        1,
+      ];
     case Direction.DOWN_RIGHT:
-      return {
-        x: currentY % 2 === 0 ? 1 : 0,
-        y: 1,
-      };
+      return [
+        currentY % 2 === 0 ? 1 : 0,
+        1,
+      ];
     case Direction.LEFT:
-      return {
-        x: -1,
-        y: 0,
-      };
+      return [
+        -1,
+        0,
+      ];
     case Direction.RIGHT:
-      return {
-        x: 1,
-        y: 0,
-      };
+      return [
+        1,
+        0,
+      ];
   }
 }

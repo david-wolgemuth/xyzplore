@@ -108,7 +108,7 @@ export const SLIME_TILE = {
   name: 'slime',
   color: '#daa608',
   key: 's',
-  display: '𓃡',
+  display: '𓆧',
   bold: true,
   impassable: true,
   mob: true,
