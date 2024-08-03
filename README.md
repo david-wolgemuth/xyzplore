@@ -5,7 +5,7 @@ Play it here!
 
 https://david-wolgemuth.github.io/xyzplore/?t=readme
 
-[https://david-wolgemuth.github.io/xyzplore/?t=readme](hosted on gh pages)
+hosted on gh pages
 
 david-wolgemuth.github.io
 
