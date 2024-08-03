@@ -29,7 +29,7 @@ This React application describes a game where the player navigates a hexagonal g
 - **Dialog System**: Managing dialogs for NPC interactions.
 - **Game State Management**: Saving and loading game states.
 
-### README.md
+### Generated Description / (LLM Generated)
 
 ```markdown
 # Hex Grid Adventure Game
