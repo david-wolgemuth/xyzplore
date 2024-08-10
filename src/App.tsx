@@ -11,8 +11,10 @@ import {
   UP_STAIRS_TILE,
   PLAYER_TILE,
   SLIME_TILE,
+  GRASS_TILE,
   HOUSE_TILE,
   BIRD_TILE,
+  LANDSCAPER_TILE,
   WATER_TILE,
 } from './Tiles';
 import { Grid } from './Grid';
@@ -475,14 +477,29 @@ class App extends React.Component {
           return this.moveBat(mob);
         case BIRD_TILE.key:
           return this.moveBird(mob);
+        case LANDSCAPER_TILE.key:
+          return this.moveLandscaper(mob);
         default:
           return mob;
       }
     });
 
+    // get actions
+    const actionCallbacks = []
+    // for newMobs.map(mob => mob.action).filter(action => action);
+    for (const mob of newMobs) {
+      if (mob.action) {
+        actionCallbacks.push(mob.action);
+        delete mob.action;
+      }
+    }
+
     this.setState({
       mobs: newMobs,
-    }, cb);
+    }, () => {
+      actionCallbacks.forEach(action => action());
+      cb();
+    });
   }
 
   /**
@@ -543,7 +560,6 @@ class App extends React.Component {
     return slime;
   };
 
-
   /**
    * Moves in straight line,
    *  if blocked, moves in random direction
@@ -573,7 +589,9 @@ class App extends React.Component {
 
     for (const direction of directions) {
       const [deltaX, deltaY] = getHexGridDelta(y, direction);
-      if (this.canMoveMob(x, y, deltaX, deltaY, true)) {
+      // can pass over water
+      const canFly = true;
+      if (this.canMoveMob(x, y, deltaX, deltaY, canFly)) {
         return {
           ...bat,
           x: bat.x + deltaX,
@@ -584,6 +602,61 @@ class App extends React.Component {
     }
     console.warn("bat is stuck", bat);
     return bat;
+  }
+
+  /**
+   * Moves in straight line,
+   *  if blocked, moves in random direction
+   * (copied from bat)
+   */
+  moveLandscaper = (landscaper) => {
+    const { level } = this.state;
+    const { x, y, direction } = landscaper;
+
+    if (direction) {
+      const [deltaX, deltaY] = getHexGridDelta(y, direction);
+      if (this.canMoveMob(x, y, deltaX, deltaY)) {
+        return {
+          ...landscaper,
+          x: landscaper.x + deltaX,
+          y: landscaper.y + deltaY,
+        };
+      }
+    }
+
+    const directions = randomSort([
+      Direction.NORTH_WEST,
+      Direction.WEST,
+      Direction.SOUTH_WEST,
+      Direction.SOUTH_EAST,
+      Direction.EAST,
+      Direction.NORTH_EAST,
+    ]);
+
+    for (const direction of directions) {
+      const [deltaX, deltaY] = getHexGridDelta(y, direction);
+      if (this.canMoveMob(x, y, deltaX, deltaY, true)) {
+          // x: landscaper.x + deltaX,
+          // y: landscaper.y + deltaY,
+        const newX = landscaper.x + deltaX;
+        const newY = landscaper.y + deltaY;
+        const tileKeyAtNewLocation = level[newY][newX];
+        const canTakeItem = tileKeyAtNewLocation === GRASS_TILE.key;
+        return {
+          ...landscaper,
+          x: landscaper.x + deltaX,
+          y: landscaper.y + deltaY,
+          direction: direction,
+          action: () => {
+            if (canTakeItem) {
+              this.mobTakeItem(landscaper, x + deltaX, y + deltaY);
+            }
+          },
+        };
+      }
+    }
+    console.warn("landscaper is stuck", landscaper);
+    return landscaper;
   }
 
   /**
@@ -661,7 +734,9 @@ class App extends React.Component {
 
     for (const direction of oppositeDirections) {
       const [deltaX, deltaY] = getHexGridDelta(y, direction);
-      if (this.canMoveMob(x, y, deltaX, deltaY, true)) {
+      // can pass over water
+      const canFly = true;
+      if (this.canMoveMob(x, y, deltaX, deltaY, canFly)) {
         return {
           ...bird,
           x: bird.x + deltaX,
@@ -793,6 +868,13 @@ class App extends React.Component {
     level[y][x] = EMPTY_TILE.key;
     inventory[tileKey] = (inventory[tileKey] || 0) + 1;
     this.setState({ level, inventory });
+  }
+
+  mobTakeItem = (mob, x, y) => {
+    console.log('mob taking item', mob, x, y);
+    const { level } = this.state;
+    level[y][x] = EMPTY_TILE.key;
+    return level;
   }
 
   componentDidMount(): void {

@@ -66,6 +66,17 @@ export const BIRD_TILE = {
   // background: 'green',
 }
 
+export const LANDSCAPER_TILE = {
+  name: 'landscaper',
+  color: '#cd3f58',
+  key: 'L',
+  display: '%',
+  mob: true,
+  impassable: true,
+  bold: true,
+  // background: 'green',
+}
+
 export const FLOWER_TILE = {
   name: 'flower',
   color: '#cd3f58',
@@ -143,6 +154,7 @@ export const TILES = [
   ROCK_TILE,
   PLAYER_TILE,
   BAT_TILE,
+  LANDSCAPER_TILE,
   NPC_TILE,
   SLIME_TILE,
   FLOWER_TILE,
